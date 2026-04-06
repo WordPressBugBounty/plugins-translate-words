@@ -8,10 +8,10 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-use Linguator\Admin\Controllers\LMAT_Admin_Strings;
-use Linguator\Includes\Helpers\LMAT_MO;
-use Linguator\Includes\Other\LMAT_Language;
-use Linguator\Settings\Controllers\LMAT_Settings;
+use Linguator\Admin\Controllers\Linguator_Admin_Strings;
+use Linguator\Includes\Helpers\Linguator_MO;
+use Linguator\Includes\Other\Linguator_Language;
+use Linguator\Settings\Controllers\Linguator_Settings;
 use Linguator\Includes\Models\Languages;
 use WP_List_Table;
 use WP_Error;
@@ -26,7 +26,7 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
  *
  *  
  */
-class LMAT_Table_String extends WP_List_Table {
+class Linguator_Table_String extends WP_List_Table {
 	/**
 	 * The list of languages.
 	 *
@@ -71,7 +71,7 @@ class LMAT_Table_String extends WP_List_Table {
 		);
 
 		$this->languages = $languages;
-		$this->strings = LMAT_Admin_Strings::get_strings();
+		$this->strings = Linguator_Admin_Strings::get_strings();
 		$this->groups = array_unique( wp_list_pluck( $this->strings, 'context' ) );
 
 		$this->selected_group = -1;
@@ -112,7 +112,7 @@ class LMAT_Table_String extends WP_List_Table {
 			'<label class="screen-reader-text" for="cb-select-%1$s">%2$s</label><input id="cb-select-%1$s" type="checkbox" name="strings[]" value="%1$s" %3$s />',
 			esc_attr( isset( $item['row'] ) ? $item['row'] : '' ),
 			/* translators:  accessibility text, %s is a string potentially in any language */
-			sprintf( __( 'Select %s', 'linguator-multilingual-ai-translation' ), format_to_edit( $item['string'] ) ),
+			sprintf( __( 'Select %s', 'translate-words' ), format_to_edit( $item['string'] ) ),
 			disabled( empty( $item['icl'] ), true, false ) // Only strings registered with WPML API can be removed.
 		);
 	}
@@ -176,10 +176,10 @@ class LMAT_Table_String extends WP_List_Table {
 	public function get_columns() {
 		return array(
 			'cb'           => '<input type="checkbox" />', // Checkbox.
-			'string'       => esc_html__( 'String', 'linguator-multilingual-ai-translation' ),
-			'name'         => esc_html__( 'Name', 'linguator-multilingual-ai-translation' ),
-			'context'      => esc_html__( 'Group', 'linguator-multilingual-ai-translation' ),
-			'translations' => esc_html__( 'Translations', 'linguator-multilingual-ai-translation' ),
+			'string'       => esc_html__( 'String', 'translate-words' ),
+			'name'         => esc_html__( 'Name', 'translate-words' ),
+			'context'      => esc_html__( 'Group', 'translate-words' ),
+			'translations' => esc_html__( 'Translations', 'translate-words' ),
 		);
 	}
 
@@ -214,7 +214,7 @@ class LMAT_Table_String extends WP_List_Table {
 	 *
 	 *  
 	 *
-	 * @param LMAT_Language[] $languages An array of language objects.
+	 * @param Linguator_Language[] $languages An array of language objects.
 	 * @param string         $s         Searched string.
 	 * @return string[] Found strings.
 	 */
@@ -222,7 +222,7 @@ class LMAT_Table_String extends WP_List_Table {
 		$founds = array();
 
 		foreach ( $languages as $language ) {
-			$mo = new LMAT_MO();
+			$mo = new Linguator_MO();
 			$mo->import_from_db( $language );
 			foreach ( wp_list_pluck( $mo->entries, 'translations' ) as $string => $translation ) {
 				if ( false !== stripos( $translation[0], $s ) ) {
@@ -245,10 +245,12 @@ class LMAT_Table_String extends WP_List_Table {
 	 */
 	protected function usort_reorder( $a, $b ) {
 		if ( ! empty( $_GET['orderby'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
-			$orderby = sanitize_key( $_GET['orderby'] ); // phpcs:ignore WordPress.Security.NonceVerification
+			$orderby = sanitize_key( wp_unslash( $_GET['orderby'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
+			$order   = ! empty( $_GET['order'] ) ? sanitize_key( wp_unslash( $_GET['order'] ) ) : 'asc'; // phpcs:ignore WordPress.Security.NonceVerification
+			$order   = in_array( $order, array( 'asc', 'desc' ), true ) ? $order : 'asc';
 			if ( isset( $a[ $orderby ], $b[ $orderby ] ) ) {
 				$result = strcmp( $a[ $orderby ], $b[ $orderby ] ); // Determine sort order
-				return ( empty( $_GET['order'] ) || 'asc' === $_GET['order'] ) ? $result : -$result; // phpcs:ignore WordPress.Security.NonceVerification
+				return ( 'asc' === $order ) ? $result : -$result;
 			}
 		}
 
@@ -318,7 +320,7 @@ class LMAT_Table_String extends WP_List_Table {
 		foreach ( $languages as $language ) {
 			$disabled = disabled( in_array( $language->slug, $allowed_language_slugs, true ), false, false );
 
-			$mo = new LMAT_MO();
+			$mo = new Linguator_MO();
 			$mo->import_from_db( $language );
 			foreach ( $this->items as $key => $row ) {
 				$this->items[ $key ]['translations'][ $language->slug ] = $mo->translate_if_any( $row['string'] );
@@ -359,13 +361,13 @@ class LMAT_Table_String extends WP_List_Table {
 		printf(
 			'<label class="screen-reader-text" for="select-group" >%s</label>',
 			/* translators: accessibility text */
-			esc_html__( 'Filter by group', 'linguator-multilingual-ai-translation' )
+			esc_html__( 'Filter by group', 'translate-words' )
 		);
 		echo '<select id="select-group" name="group">' . "\n";
 		printf(
 			'<option value="-1"%s>%s</option>' . "\n",
 			selected( $this->selected_group, -1, false ),
-			esc_html__( 'View all groups', 'linguator-multilingual-ai-translation' )
+			esc_html__( 'View all groups', 'translate-words' )
 		);
 
 		foreach ( $this->groups as $group ) {
@@ -378,7 +380,7 @@ class LMAT_Table_String extends WP_List_Table {
 		}
 		echo '</select>' . "\n";
 
-		submit_button( __( 'Filter', 'linguator-multilingual-ai-translation' ), 'button', 'filter_action', false, array( 'id' => 'post-query-submit' ) );
+		submit_button( __( 'Filter', 'translate-words' ), 'button', 'filter_action', false, array( 'id' => 'post-query-submit' ) );
 		echo '</div>';
 	}
 
@@ -395,27 +397,27 @@ class LMAT_Table_String extends WP_List_Table {
 
 		if ( ! empty( $_POST['submit'] ) ) {
 			foreach ( $this->languages->filter( 'translator' )->get_list() as $language ) {
-				if ( empty( $_POST['translation'][ $language->slug ] ) || ! is_array( $_POST['translation'][ $language->slug ] ) ) { // In case the language filter is active
+				if ( empty( $_POST['translation'][ $language->slug ] ) || ! is_array( wp_unslash( $_POST['translation'][ $language->slug ] ) ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 					continue;
 				}
 				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized below with sanitize_textarea_field
-				$translations = array_map( 'sanitize_textarea_field', array_map( 'trim', (array) wp_unslash( $_POST['translation'][ $language->slug ] ) ) );
+				$translations = array_map( 'sanitize_textarea_field', array_map( 'trim', (array) wp_unslash( $_POST['translation'][ $language->slug ] ) ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
-				$mo = new LMAT_MO();
+				$mo = new Linguator_MO();
 				$mo->import_from_db( $language );
 
 				foreach ( $translations as $key => $translation ) {
 					/**
 					 * Filters the string translation before it is saved in DB.
-					 * Allows to sanitize strings registered with lmat_register_string().
+					 * Allows to sanitize strings registered with linguator_register_string().
 					 *
 					 *  
 					 *   The translation passed to the filter is unslashed.
 					 *   Add original string as 4th parameter.
 					 *
 					 * @param string $translation The string translation.
-					 * @param string $name        The name as defined in lmat_register_string.
-					 * @param string $context     The context as defined in lmat_register_string.
+					 * @param string $name        The name as defined in linguator_register_string.
+					 * @param string $context     The context as defined in linguator_register_string.
 					 * @param string $original    The original string to translate.
 					 */
 					$translation = apply_filters( 'lmat_sanitize_string_translation', $translation, $this->strings[ $key ]['name'], $this->strings[ $key ]['context'], $this->strings[ $key ]['string'] );
@@ -429,7 +431,7 @@ class LMAT_Table_String extends WP_List_Table {
 
 				// Clean database ( removes all strings which were registered some day but are no more )
 				if ( ! empty( $_POST['clean'] ) && current_user_can( 'manage_options' ) ) {
-					$new_mo = new LMAT_MO();
+					$new_mo = new Linguator_MO();
 
 					foreach ( $this->strings as $string ) {
 						$new_mo->add_entry( $mo->make_entry( $string['string'], $mo->translate( $string['string'] ) ) );
@@ -439,7 +441,7 @@ class LMAT_Table_String extends WP_List_Table {
 				isset( $new_mo ) ? $new_mo->export_to_db( $language ) : $mo->export_to_db( $language );
 			}
 
-			lmat_add_notice( new WP_Error( 'lmat_strings_translations_updated', __( 'Translations updated.', 'linguator-multilingual-ai-translation' ), 'success' ) );
+			linguator_add_notice( new WP_Error( 'lmat_strings_translations_updated', __( 'Translations updated.', 'translate-words' ), 'success' ) );
 
 			/**
 			 * Fires after the strings translations are saved in DB
@@ -457,13 +459,16 @@ class LMAT_Table_String extends WP_List_Table {
 		}
 
 		// To refresh the page 
-		$args = array_intersect_key( $_REQUEST, array_flip( array( 's', 'paged', 'group' ) ) );
+		$args = array_intersect_key( wp_unslash( $_REQUEST ), array_flip( array( 's', 'paged', 'group' ) ) );
 		if ( ! empty( $_GET['paged'] ) && ! empty( $_POST['submit'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$args['paged'] = (int) $_GET['paged']; // Don't rely on $_REQUEST['paged'] or $_POST['paged']. 
+			$args['paged'] = absint( wp_unslash( $_GET['paged'] ) ); // Don't rely on $_REQUEST['paged'] or $_POST['paged'].
 		}
 		if ( ! empty( $args['s'] ) ) {
-			$args['s'] = urlencode( $args['s'] ); // Searched string needs to be encoded as it comes from $_POST
+			$args['s'] = urlencode( sanitize_text_field( $args['s'] ) ); // Searched string needs to be encoded as it comes from $_POST.
 		}
-		LMAT_Settings::redirect( $args );
+		if ( ! empty( $args['group'] ) ) {
+			$args['group'] = sanitize_key( $args['group'] );
+		}
+		Linguator_Settings::redirect( $args );
 	}
 }

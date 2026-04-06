@@ -11,13 +11,13 @@ if(!defined('ABSPATH')){
  * example:
  * 
  * Dashbord initialize
- * if(!class_exists('LMAT_Translation_Dashboard')){
- * $dashboard=LMAT_Translation_Dashboard::get_instance();
+ * if(!class_exists('Linguator_Translation_Dashboard')){
+ * $dashboard=Linguator_Translation_Dashboard::get_instance();
  * }
  * 
  * Store options
- * if(class_exists('LMAT_Translation_Dashboard')){
- *  LMAT_Translation_Dashboard::store_options(
+ * if(class_exists('Linguator_Translation_Dashboard')){
+ *  Linguator_Translation_Dashboard::store_options(
  *      'prefix', // Required plugin prefix
  *      'unique_key',// Optional unique key is used to update the data based on post/page id or plugin/themes name
  *      'update', // Optional preview string count or character count update or replace
@@ -36,7 +36,7 @@ if(!defined('ABSPATH')){
  * }
  * 
  * Add Tabs
- * add_filter('LMAT_Translation_Dashboard_tabs', function($tabs){
+ * add_filter('Linguator_Translation_Dashboard_tabs', function($tabs){
  *  $tabs[]=array(
  *      'prefix'=>'tab_name', // Required
  *      'tab_name'=>'Tab Name', // Required
@@ -54,8 +54,8 @@ if(!defined('ABSPATH')){
  * });
  * 
  * Display review notice
- * if(class_exists('LMAT_Translation_Dashboard')){
- *  LMAT_Translation_Dashboard::review_notice(
+ * if(class_exists('Linguator_Translation_Dashboard')){
+ *  Linguator_Translation_Dashboard::review_notice(
  *      'prefix', // Required
  *      'plugin_name', // Required
  *      'url', // Required
@@ -64,8 +64,8 @@ if(!defined('ABSPATH')){
  * }
  * 
  * Get translation data
- * if(class_exists('LMAT_Translation_Dashboard')){
- *  LMAT_Translation_Dashboard::get_translation_data(
+ * if(class_exists('Linguator_Translation_Dashboard')){
+ *  Linguator_Translation_Dashboard::get_translation_data(
  *      'prefix', // Required
  *      array(
  *          'editor_type' => 'gutenberg', // optional return data based on editor type
@@ -75,8 +75,8 @@ if(!defined('ABSPATH')){
  * }
  */
 
-if(!class_exists('LMAT_Translation_Dashboard')){
-    class LMAT_Translation_Dashboard{
+if(!class_exists('Linguator_Translation_Dashboard')){
+    class Linguator_Translation_Dashboard{
 
         /**
          * Init
@@ -102,7 +102,7 @@ if(!class_exists('LMAT_Translation_Dashboard')){
         }
 
         public function __construct(){
-            add_action('wp_ajax_lmat_hide_review_notice', array($this, 'lmat_hide_review_notice'));
+            add_action('wp_ajax_lmat_hide_review_notice', array($this, 'linguator_hide_review_notice'));
         }
 
         /**
@@ -242,7 +242,7 @@ if(!class_exists('LMAT_Translation_Dashboard')){
         }
 
         public static function review_notice($prefix, $plugin_name, $url){
-            if(self::lmat_hide_review_notice_status($prefix)){
+            if(self::linguator_hide_review_notice_status($prefix)){
                 return;
             }
             
@@ -261,12 +261,12 @@ if(!class_exists('LMAT_Translation_Dashboard')){
             $message = sprintf(
                 // translators: %s: plugin name
                 '%s! %s <strong>%s</strong> %s <br>%s %s <a href="https://coolplugins.net/?utm_source=twlmat_plugin&utm_medium=inside&utm_campaign=author_page&utm_content=review_notice" target="_blank"><strong>Cool Plugins</strong></a>!<br/>',
-                __('Thanks for using', 'linguator-multilingual-ai-translation') . ' <b>' . $plugin_name . '</b>',
-                __('You\'ve translated', 'linguator-multilingual-ai-translation'),
-                esc_html($total_character_count) . ' ' . __('characters', 'linguator-multilingual-ai-translation'),
-                __('so far using our plugin!', 'linguator-multilingual-ai-translation'),
-                __('If our plugin saves your time and effort, Please give us a quick rating,', 'linguator-multilingual-ai-translation'),
-                __('it works as a boost for us to keep working on more', 'linguator-multilingual-ai-translation')
+                __('Thanks for using', 'translate-words') . ' <b>' . $plugin_name . '</b>',
+                __('You\'ve translated', 'translate-words'),
+                esc_html($total_character_count) . ' ' . __('characters', 'translate-words'),
+                __('so far using our plugin!', 'translate-words'),
+                __('If our plugin saves your time and effort, Please give us a quick rating,', 'translate-words'),
+                __('it works as a boost for us to keep working on more', 'translate-words')
             );
 
             $prefix = sanitize_key($prefix);
@@ -282,32 +282,37 @@ if(!class_exists('LMAT_Translation_Dashboard')){
             ];
 
             $html = '<div class="notice notice-info is-dismissible cpt-review-notice">';
-            $html .= '<div class="cpt-review-notice-content"><p>'.$message.'</p><div class="lmat-review-notice-dismiss" data-prefix="'.$prefix.'" data-nonce="'.wp_create_nonce('lmat_hide_review_notice').'"><a href="'. $url .'" target="_blank" class="button button-primary">Rate Now! ★★★★★</a><button class="button cpt-already-reviewed">'.__('Already Reviewed', 'linguator-multilingual-ai-translation').'</button><button class="button cpt-not-interested">'.__('Not Interested', 'linguator-multilingual-ai-translation').'</button></div></div></div>';
+            $html .= '<div class="cpt-review-notice-content"><p>'.$message.'</p><div class="lmat-review-notice-dismiss" data-prefix="'.$prefix.'" data-nonce="'.wp_create_nonce('lmat_hide_review_notice').'"><a href="'. $url .'" target="_blank" class="button button-primary">Rate Now! ★★★★★</a><button class="button cpt-already-reviewed">'.__('Already Reviewed', 'translate-words').'</button><button class="button cpt-not-interested">'.__('Not Interested', 'translate-words').'</button></div></div></div>';
                 
             echo wp_kses($html, $allowed);
         }
 
-        public static function lmat_hide_review_notice_status($prefix){
+        public static function linguator_hide_review_notice_status($prefix){
             $review_notice_dismissed = get_option('cpt_review_notice_dismissed', array());
             return isset($review_notice_dismissed[$prefix]) ? $review_notice_dismissed[$prefix] : false;
         }
 
-        public function lmat_hide_review_notice(){
+        public function linguator_hide_review_notice(){
             if(!current_user_can('manage_options')){
-                wp_send_json_error( __( 'Unauthorized', 'linguator-multilingual-ai-translation' ), 403 );
+                wp_send_json_error( __( 'Unauthorized', 'translate-words' ), 403 );
                 wp_die( '0', 403 );
             }
 
-            if(isset($_POST['nonce'], $_POST['prefix']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'lmat_hide_review_notice')){
-                $prefix = sanitize_key(wp_unslash($_POST['prefix']));
-                $review_notice_dismissed = get_option('cpt_review_notice_dismissed', array());
-                $review_notice_dismissed[$prefix] = true;
-                update_option('cpt_review_notice_dismissed', $review_notice_dismissed);
-                wp_send_json_success();
-            }else{
-                wp_send_json_error( __( 'Invalid nonce', 'linguator-multilingual-ai-translation' ), 400 );
+            if ( ! check_ajax_referer( 'lmat_hide_review_notice', 'nonce', false ) ) {
+                wp_send_json_error( __( 'Invalid nonce', 'translate-words' ), 400 );
                 wp_die( '0', 400 );
             }
+
+            if ( ! isset( $_POST['prefix'] ) ) {
+                wp_send_json_error( __( 'Missing prefix', 'translate-words' ), 400 );
+                wp_die( '0', 400 );
+            }
+
+            $prefix = sanitize_key( wp_unslash( $_POST['prefix'] ) );
+            $review_notice_dismissed = get_option('cpt_review_notice_dismissed', array());
+            $review_notice_dismissed[$prefix] = true;
+            update_option('cpt_review_notice_dismissed', $review_notice_dismissed);
+            wp_send_json_success();
         }
     }
 }

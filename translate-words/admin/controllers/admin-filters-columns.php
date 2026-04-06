@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-use Linguator\Includes\Walkers\LMAT_Walker_Dropdown;
+use Linguator\Includes\Walkers\Linguator_Walker_Dropdown;
 use WP_Screen;
 use WP_Ajax_Response;
 use WP_Term;
@@ -20,21 +20,21 @@ use WP_Term;
  *
  *  
  */
-class LMAT_Admin_Filters_Columns {
+class Linguator_Admin_Filters_Columns {
 	/**
-	 * @var LMAT_Model
+	 * @var Linguator_Model
 	 */
 	public $model;
 
 	/**
-	 * @var LMAT_Admin_Links|null
+	 * @var Linguator_Admin_Links|null
 	 */
 	public $links;
 
 	/**
 	 * Language selected in the admin language filter.
 	 *
-	 * @var LMAT_Language|null
+	 * @var Linguator_Language|null
 	 */
 	public $filter_lang;
 
@@ -151,8 +151,8 @@ class LMAT_Admin_Filters_Columns {
 	 * @return void
 	 */
 	public function post_column( $column, $post_id ) {
-		$inline = wp_doing_ajax() && isset( $_REQUEST['action'], $_POST['inline_lang_choice'] ) && 'inline-save' === $_REQUEST['action']; // phpcs:ignore WordPress.Security.NonceVerification
-		$lang = $inline ? $this->model->get_language( sanitize_key( $_POST['inline_lang_choice'] ) ) : $this->model->post->get_language( $post_id ); // phpcs:ignore WordPress.Security.NonceVerification
+		$inline = wp_doing_ajax() && isset( $_REQUEST['action'], $_POST['inline_lang_choice'] ) && 'inline-save' === sanitize_key( wp_unslash( $_REQUEST['action'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		$lang = $inline ? $this->model->get_language( sanitize_key( wp_unslash( $_POST['inline_lang_choice'] ) ) ) : $this->model->post->get_language( $post_id ); // phpcs:ignore WordPress.Security.NonceVerification
 
 		if ( false === strpos( $column, 'language_' ) || ! $lang ) {
 			return;
@@ -179,11 +179,11 @@ class LMAT_Admin_Filters_Columns {
 					$flag = $this->get_flag_html( $language );
 					$class = 'lmat_column_flag';
 					/* translators: accessibility text, %s is a native language name */
-					$s = sprintf( __( 'Edit this item in %s', 'linguator-multilingual-ai-translation' ), $language->name );
+					$s = sprintf( __( 'Edit this item in %s', 'translate-words' ), $language->name );
 				} else {
 					$class = esc_attr( 'lmat_icon_edit translation_' . $id );
 					/* translators: accessibility text, %s is a native language name */
-					$s = sprintf( __( 'Edit the translation in %s', 'linguator-multilingual-ai-translation' ), $language->name );
+					$s = sprintf( __( 'Edit the translation in %s', 'translate-words' ), $language->name );
 				}
 
 				$post = get_post( $id );
@@ -195,21 +195,21 @@ class LMAT_Admin_Filters_Columns {
 						esc_attr( $post->post_title ),
 						esc_url( $link ),
 						esc_html( $s ),
-						$flag // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+						wp_kses_post( $flag )
 					);
 				}
 			} elseif ( $id === $post_id ) {
 				printf(
 					'<span class="lmat_column_flag" style=""><span class="screen-reader-text">%1$s</span>%2$s</span>',
 					/* translators: accessibility text, %s is a native language name */
-					esc_html( sprintf( __( 'This item is in %s', 'linguator-multilingual-ai-translation' ), $language->name ) ),
-					$this->get_flag_html( $language ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+					esc_html( sprintf( __( 'This item is in %s', 'translate-words' ), $language->name ) ),
+					wp_kses_post( $this->get_flag_html( $language ) )
 				);
 			}
 		}
 		// Link to add a new translation
 		else {
-			echo $this->links->new_post_translation_link( $post_id, $language ); // phpcs:ignore WordPress.Security.EscapeOutput
+			echo wp_kses_post( $this->links->new_post_translation_link( $post_id, $language ) );
 		}
 	}
 
@@ -226,10 +226,10 @@ class LMAT_Admin_Filters_Columns {
 
 			$elements = $this->model->languages->filter( 'translator' )->get_list();
 			if ( current_filter() == 'bulk_edit_custom_box' ) {
-				array_unshift( $elements, (object) array( 'slug' => -1, 'name' => __( '&mdash; No Change &mdash;', 'linguator-multilingual-ai-translation' ) ) );
+				array_unshift( $elements, (object) array( 'slug' => -1, 'name' => __( '&mdash; No Change &mdash;', 'translate-words' ) ) );
 			}
 
-			$dropdown = new LMAT_Walker_Dropdown();
+			$dropdown = new Linguator_Walker_Dropdown();
 			// The hidden field 'old_lang' allows to pass the old language to ajax request
 			printf(
 				'<fieldset class="inline-edit-col-left">
@@ -240,7 +240,7 @@ class LMAT_Admin_Filters_Columns {
 						</label>
 					</div>
 				</fieldset>',
-				esc_html__( 'Language', 'linguator-multilingual-ai-translation' ),
+				esc_html__( 'Language', 'translate-words' ),
 				wp_kses( $dropdown->walk( $elements, -1, array( 'name' => 'inline_lang_choice', 'id' => '' ) ), array(
 					'select' => array( 'name' => true, 'id' => true, 'class' => true ),
 					'option' => array( 'value' => true, 'selected' => true )
@@ -280,13 +280,13 @@ class LMAT_Admin_Filters_Columns {
 	 * @return string
 	 */
 	public function term_column( $out, $column, $term_id ) {
-		$inline = wp_doing_ajax() && isset( $_REQUEST['action'], $_POST['inline_lang_choice'] ) && 'inline-save-tax' === $_REQUEST['action']; // phpcs:ignore WordPress.Security.NonceVerification
-		if ( false === strpos( $column, 'language_' ) || ! ( $lang = $inline ? $this->model->get_language( sanitize_key( $_POST['inline_lang_choice'] ) ) : $this->model->term->get_language( $term_id ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+		$inline = wp_doing_ajax() && isset( $_REQUEST['action'], $_POST['inline_lang_choice'] ) && 'inline-save-tax' === sanitize_key( wp_unslash( $_REQUEST['action'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		if ( false === strpos( $column, 'language_' ) || ! ( $lang = $inline ? $this->model->get_language( sanitize_key( wp_unslash( $_POST['inline_lang_choice'] ) ) ) : $this->model->term->get_language( $term_id ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			return $out;
 		}
 
 		if ( isset( $_REQUEST['post_type'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
-			$post_type = sanitize_key( $_REQUEST['post_type'] ); // phpcs:ignore WordPress.Security.NonceVerification
+			$post_type = sanitize_key( wp_unslash( $_REQUEST['post_type'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
 		}
 
 		if ( isset( $GLOBALS['post_type'] ) ) {
@@ -294,7 +294,7 @@ class LMAT_Admin_Filters_Columns {
 		}
 
 		if ( isset( $_REQUEST['taxonomy'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
-			$taxonomy = sanitize_key( $_REQUEST['taxonomy'] ); // phpcs:ignore WordPress.Security.NonceVerification
+			$taxonomy = sanitize_key( wp_unslash( $_REQUEST['taxonomy'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
 		}
 
 		if ( isset( $GLOBALS['taxonomy'] ) ) {
@@ -322,11 +322,11 @@ class LMAT_Admin_Filters_Columns {
 					$flag = $this->get_flag_html( $language );
 					$class = 'lmat_column_flag';
 					/* translators: accessibility text, %s is a native language name */
-					$s = sprintf( __( 'Edit this item in %s', 'linguator-multilingual-ai-translation' ), $language->name );
+					$s = sprintf( __( 'Edit this item in %s', 'translate-words' ), $language->name );
 				} else {
 					$class = esc_attr( 'lmat_icon_edit translation_' . $id );
 					/* translators: accessibility text, %s is a native language name */
-					$s = sprintf( __( 'Edit the translation in %s', 'linguator-multilingual-ai-translation' ), $language->name );
+					$s = sprintf( __( 'Edit the translation in %s', 'translate-words' ), $language->name );
 				}
 				$out .= sprintf(
 					'<a class="%1$s" title="%2$s" href="%3$s"><span class="screen-reader-text">%4$s</span>%5$s</a>',
@@ -340,7 +340,7 @@ class LMAT_Admin_Filters_Columns {
 				$out .= sprintf(
 					'<span class="lmat_column_flag"><span class="screen-reader-text">%1$s</span>%2$s</span>',
 					/* translators: accessibility text, %s is a native language name */
-					esc_html( sprintf( __( 'This item is in %s', 'linguator-multilingual-ai-translation' ), $language->name ) ),
+					esc_html( sprintf( __( 'This item is in %s', 'translate-words' ), $language->name ) ),
 					$this->get_flag_html( $language )
 				);
 			}
@@ -383,22 +383,27 @@ class LMAT_Admin_Filters_Columns {
 			wp_die( 0 );
 		}
 
-		$post_type = sanitize_key( $_POST['post_type'] );
+		$post_id = absint( wp_unslash( $_POST['post_id'] ) );
+		if ( ! $post_id || ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_die( 0 );
+		}
+
+		$post_type = sanitize_key( wp_unslash( $_POST['post_type'] ) );
 
 		if ( ! post_type_exists( $post_type ) || ! $this->model->is_translated_post_type( $post_type ) ) {
 			wp_die( 0 );
 		}
 
 		/** @var WP_Posts_List_Table $wp_list_table */
-		$wp_list_table = _get_list_table( 'WP_Posts_List_Table', array( 'screen' => sanitize_key( $_POST['screen'] ) ) );
+		$wp_list_table = _get_list_table( 'WP_Posts_List_Table', array( 'screen' => sanitize_key( wp_unslash( $_POST['screen'] ) ) ) );
 
 		$x = new WP_Ajax_Response();
 
 		// Collect old translations
-		$translations = empty( $_POST['translations'] ) ? array() : explode( ',', $_POST['translations'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$translations = empty( $_POST['translations'] ) ? array() : explode( ',', sanitize_text_field( wp_unslash( $_POST['translations'] ) ) );
 		$translations = array_map( 'intval', $translations );
 
-		$translations = array_merge( $translations, array( (int) $_POST['post_id'] ) ); // Add current post
+		$translations = array_merge( $translations, array( $post_id ) ); // Add current post
 
 		foreach ( $translations as $post_id ) {
 			$level = is_post_type_hierarchical( $post_type ) ? count( get_ancestors( $post_id, $post_type ) ) : 0;
@@ -427,22 +432,27 @@ class LMAT_Admin_Filters_Columns {
 			wp_die( 0 );
 		}
 
-		$taxonomy = sanitize_key( $_POST['taxonomy'] );
+		$taxonomy = sanitize_key( wp_unslash( $_POST['taxonomy'] ) );
+		$term_id  = absint( wp_unslash( $_POST['term_id'] ) );
 
 		if ( ! taxonomy_exists( $taxonomy ) || ! $this->model->is_translated_taxonomy( $taxonomy ) ) {
 			wp_die( 0 );
 		}
 
+		if ( ! $term_id || ! current_user_can( 'edit_term', $term_id ) ) {
+			wp_die( 0 );
+		}
+
 		/** @var WP_Terms_List_Table $wp_list_table */
-		$wp_list_table = _get_list_table( 'WP_Terms_List_Table', array( 'screen' => sanitize_key( $_POST['screen'] ) ) );
+		$wp_list_table = _get_list_table( 'WP_Terms_List_Table', array( 'screen' => sanitize_key( wp_unslash( $_POST['screen'] ) ) ) );
 
 		$x = new WP_Ajax_Response();
 
 		// Collect old translations
-		$translations = empty( $_POST['translations'] ) ? array() : explode( ',', $_POST['translations'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$translations = empty( $_POST['translations'] ) ? array() : explode( ',', sanitize_text_field( wp_unslash( $_POST['translations'] ) ) );
 		$translations = array_map( 'intval', $translations );
 
-		$translations = array_merge( $translations, $this->model->term->get_translations( (int) $_POST['term_id'] ) ); // Add current translations
+		$translations = array_merge( $translations, $this->model->term->get_translations( $term_id ) ); // Add current translations
 		$translations = array_unique( $translations ); // Remove duplicates
 
 		foreach ( $translations as $term_id ) {
@@ -467,7 +477,7 @@ class LMAT_Admin_Filters_Columns {
 	 *
 	 *  
 	 *
-	 * @param LMAT_Language $language LMAT_Language object.
+	 * @param Linguator_Language $language Linguator_Language object.
 	 * @return string
 	 */
 	protected function get_flag_html( $language ) {

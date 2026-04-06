@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.4
  */
-class LMAT_WPBakery {
+class Linguator_WPBakery {
 	/**
 	 * Constructor
 	 *
@@ -42,22 +42,22 @@ class LMAT_WPBakery {
 	 */
 	private static function wpbakery_compatibility() {
 		// Copy WPBakery meta when translation is created via REST API
-		add_action( 'lmat_translation_created', [ __CLASS__, 'copy_meta_on_translation_created' ], 10, 2 );
+		add_action( 'lmat_translation_created', [ __CLASS__, 'linguator_copy_meta_on_translation_created' ], 10, 2 );
 		
 		// Copy WPBakery meta when translation is created via bulk translation (sync system)
-		add_action( 'lmat_created_sync_post', [ __CLASS__, 'copy_meta_on_sync_post_created' ], 10, 2 );
+		add_action( 'lmat_created_sync_post', [ __CLASS__, 'linguator_copy_meta_on_sync_post_created' ], 10, 2 );
 		
 		// Set default content for new WPBakery translations
-		add_filter( 'default_content', [ __CLASS__, 'set_default_translation_content' ], 10, 2 );
+		add_filter( 'default_content', [ __CLASS__, 'linguator_set_default_translation_content' ], 10, 2 );
 		
 		// Ensure WPBakery editor is available for translated posts
-		add_filter( 'vc_is_valid_post_type_be', [ __CLASS__, 'enable_wpbakery_editor' ], 10, 2 );
+		add_filter( 'vc_is_valid_post_type_be', [ __CLASS__, 'linguator_enable_wpbakery_editor' ], 10, 2 );
 		
 		// Mark WPBakery posts as "classic" editor type for translation but preserve structure
-		add_filter( 'lmat_editor_type', [ __CLASS__, 'set_wpbakery_editor_type' ], 10, 2 );
+		add_filter( 'lmat_editor_type', [ __CLASS__, 'linguator_set_wpbakery_editor_type' ], 10, 2 );
 		
 		// Disable Gutenberg for WPBakery translation creation
-		add_filter( 'use_block_editor_for_post', [ __CLASS__, 'disable_gutenberg_for_wpbakery' ], 10, 2 );
+		add_filter( 'use_block_editor_for_post', [ __CLASS__, 'linguator_disable_gutenberg_for_wpbakery' ], 10, 2 );
 		
 		// Filter post content for translation - decode and expose WPBakery content
 		// These filters work for both single page translation and bulk translation
@@ -67,10 +67,30 @@ class LMAT_WPBakery {
 		add_filter( 'lmat_post_content_for_translation', [ __CLASS__, 'expose_translatable_attributes' ], 20 );
 		
 		// Filter post content before saving to re-encode WPBakery attributes
-		add_filter( 'wp_insert_post_data', [ __CLASS__, 'encode_wpbakery_content_before_save' ], 10, 2 );
-		
-		// Clean up page translation placeholders on frontend display (priority 5 - before shortcodes)
-		add_filter( 'the_content', [ __CLASS__, 'cleanup_content_on_frontend' ], 5 );
+		add_filter( 'wp_insert_post_data', [ __CLASS__, 'linguator_encode_wpbakery_content_before_save' ], 10, 2 );
+
+		// Clean up translation markers on frontend output only (not wp-admin).
+		add_action( 'wp', [ __CLASS__, 'linguator_register_frontend_the_content_cleanup' ], 0 );
+	}
+
+	/**
+	 * Attach `the_content` cleanup only on public requests.
+	 *
+	 * Avoids registering a global `the_content` filter while wp-admin is loading.
+	 * The callback still returns unchanged content unless markers are present
+	 * (`#lmat_page_translation*`, `[lmat_val`, `___LMAT_`), so non-WPBakery posts
+	 * pay only a few strpos checks per `the_content` run (singular, archives, feeds).
+	 *
+	 * @since 1.0.10
+	 *
+	 * @return void
+	 */
+	public static function linguator_register_frontend_the_content_cleanup() {
+		if ( is_admin() ) {
+			return;
+		}
+		// Priority 5: before shortcodes so stray markers never reach VC parsing.
+		add_filter( 'the_content', [ __CLASS__, 'linguator_cleanup_content_on_frontend' ], 5 );
 	}
 
 
@@ -88,7 +108,7 @@ class LMAT_WPBakery {
 	 * @param int $from_post_id Original post ID.
 	 * @param int $to_post_id   Target post ID.
 	 */
-	public static function copy_wpbakery_meta( $from_post_id, $to_post_id ) {
+	public static function linguator_copy_wpbakery_meta( $from_post_id, $to_post_id ) {
 		$from_post_meta = get_post_meta( $from_post_id );
 		
 		// Core meta fields to copy
@@ -137,14 +157,14 @@ class LMAT_WPBakery {
 	 * @param int    $new_post_id      New translation post ID.
 	 * @param int    $source_id        Source post ID.
 	 */
-	public static function copy_meta_on_translation_created( $new_post_id, $source_id ) {
+	public static function linguator_copy_meta_on_translation_created( $new_post_id, $source_id ) {
 		// Check if source post uses WPBakery
 		$wpb_status = get_post_meta( $source_id, '_wpb_vc_js_status', true );
 		
 		// Only copy if source post has WPBakery enabled
 		if ( 'true' === $wpb_status || true === $wpb_status ) {
 			// Copy WPBakery meta fields
-			self::copy_wpbakery_meta( $source_id, $new_post_id );
+			self::linguator_copy_wpbakery_meta( $source_id, $new_post_id );
 			
 			// Copy post content (which contains WPBakery shortcodes)
 			$source_post = get_post( $source_id );
@@ -170,14 +190,14 @@ class LMAT_WPBakery {
 	 * @param int    $source_id        Source post ID.
 	 * @param int    $new_post_id      New translation post ID.
 	 */
-	public static function copy_meta_on_sync_post_created( $source_id, $new_post_id ) {
+	public static function linguator_copy_meta_on_sync_post_created( $source_id, $new_post_id ) {
 		// Check if source post uses WPBakery
 		$wpb_status = get_post_meta( $source_id, '_wpb_vc_js_status', true );
 		
 		// Only copy if source post has WPBakery enabled
 		if ( 'true' === $wpb_status || true === $wpb_status ) {
 			// Copy WPBakery meta fields
-			self::copy_wpbakery_meta( $source_id, $new_post_id );
+			self::linguator_copy_wpbakery_meta( $source_id, $new_post_id );
 			
 			// Note: Content is already copied by the sync system,
 			// but we need to ensure WPBakery-specific meta is copied
@@ -198,21 +218,28 @@ class LMAT_WPBakery {
 	 * @param WP_Post $post    Post object.
 	 * @return string Modified content.
 	 */
-	public static function set_default_translation_content( $content, $post ) {
+	public static function linguator_set_default_translation_content( $content, $post ) {
 		// Only for new posts
 		if ( ! $post || 'auto-draft' !== $post->post_status ) {
 			return $content;
 		}
 		
 		// Check if we have from_post parameter
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- WordPress core parameter, no nonce available
-		if ( ! isset( $_GET['from_post'] ) ) {
+		if ( ! isset( $_GET['from_post'], $_GET['_wpnonce'] ) ) {
 			return $content;
 		}
 		
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- WordPress core parameter, sanitized with absint()
-		$from_post_id = absint( $_GET['from_post'] );
+		$nonce = sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) );
+		if ( ! wp_verify_nonce( $nonce, 'new-post-translation' ) ) {
+			return $content;
+		}
+
+		$from_post_id = absint( wp_unslash( $_GET['from_post'] ) );
 		if ( ! $from_post_id ) {
+			return $content;
+		}
+
+		if ( ! current_user_can( 'edit_post', $from_post_id ) ) {
 			return $content;
 		}
 		
@@ -230,7 +257,7 @@ class LMAT_WPBakery {
 		
 		// Also copy WPBakery meta to the new post
 		if ( $post->ID ) {
-			self::copy_wpbakery_meta( $from_post_id, $post->ID );
+			self::linguator_copy_wpbakery_meta( $from_post_id, $post->ID );
 		}
 		
 		return $source_post->post_content;
@@ -251,7 +278,7 @@ class LMAT_WPBakery {
 	 *
 	 * @return bool Whether the post type is valid for WPBakery.
 	 */
-	public static function enable_wpbakery_editor( $is_valid, $type ) {
+	public static function linguator_enable_wpbakery_editor( $is_valid, $type ) {
 		// If already valid, return as is
 		if ( $is_valid ) {
 			return $is_valid;
@@ -259,7 +286,7 @@ class LMAT_WPBakery {
 
 		// Check if this is a translated post
 		global $post;
-		if ( $post && lmat_get_post_language( $post->ID ) ) {
+		if ( $post && linguator_get_post_language( $post->ID ) ) {
 			// If it has a language assigned, it's likely a translation
 			// Allow WPBakery editor
 			return true;
@@ -284,7 +311,7 @@ class LMAT_WPBakery {
 	 *
 	 * @return string The editor type.
 	 */
-	public static function set_wpbakery_editor_type( $editor_type, $post_id ) {
+	public static function linguator_set_wpbakery_editor_type( $editor_type, $post_id ) {
 		// Check if this post uses WPBakery
 		$wpb_status = get_post_meta( $post_id, '_wpb_vc_js_status', true );
 		
@@ -310,7 +337,7 @@ class LMAT_WPBakery {
 	 * @param WP_Post $post             The post being edited.
 	 * @return bool Whether to use the block editor.
 	 */
-	public static function disable_gutenberg_for_wpbakery( $use_block_editor, $post ) {
+	public static function linguator_disable_gutenberg_for_wpbakery( $use_block_editor, $post ) {
 		// If already disabled, return
 		if ( ! $use_block_editor ) {
 			return $use_block_editor;
@@ -328,7 +355,7 @@ class LMAT_WPBakery {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- WordPress core parameter, no nonce available
 		if ( isset( $_GET['from_post'] ) ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- WordPress core parameter, sanitized with absint()
-			$from_post_id = absint( $_GET['from_post'] );
+			$from_post_id = absint( wp_unslash( $_GET['from_post'] ) );
 			if ( $from_post_id ) {
 				$wpb_status = get_post_meta( $from_post_id, '_wpb_vc_js_status', true );
 				if ( 'true' === $wpb_status || true === $wpb_status ) {
@@ -473,7 +500,7 @@ class LMAT_WPBakery {
 				$append_content = '';
 
 				// Get shortcode definition from WPBakery API
-				$shortcode_def = self::get_wpbakery_shortcode_definition( $shortcode_tag );
+				$shortcode_def = self::linguator_get_wpbakery_shortcode_definition( $shortcode_tag );
 				$dynamic_translatable_attrs = [];
 				
 				if ( $shortcode_def && ! empty( $shortcode_def['params'] ) ) {
@@ -511,7 +538,7 @@ class LMAT_WPBakery {
 
 						// Handle JSON-encoded attributes (e.g., values in vc_progress_bar)
 						if ( isset( $json_attributes[ $attr_name ] ) && ! empty( $attr_val ) ) {
-							$processed_json = self::process_json_attribute( $attr_val, $json_attributes[ $attr_name ], $append_content );
+							$processed_json = self::linguator_process_json_attribute( $attr_val, $json_attributes[ $attr_name ], $append_content );
 							if ( $processed_json !== $attr_val ) {
 								// JSON was processed and tokens were added to append_content
 								return $attr_name . '=' . $attr_quote . $processed_json . $attr_quote;
@@ -526,7 +553,7 @@ class LMAT_WPBakery {
 							$is_translatable = true;
 						} else {
 							// Fallback: Use heuristics to detect translatable attributes
-							$is_translatable = self::is_attribute_translatable_by_heuristics( $attr_name, $attr_val );
+							$is_translatable = self::linguator_is_attribute_translatable_by_heuristics( $attr_name, $attr_val );
 						}
 
 						if ( $is_translatable && ! empty( $attr_val ) ) {
@@ -543,7 +570,7 @@ class LMAT_WPBakery {
 							}
 							
 							// Clean data-start and data-end attributes before exposing for translation
-							$cleaned_attr_val = self::clean_data_attributes( $attr_val );
+							$cleaned_attr_val = self::linguator_clean_data_attributes( $attr_val );
 							
 							// Generate a unique token for this attribute
 							$token = '___LMAT_' . md5( $attr_name . $attr_val . wp_rand() ) . '___';
@@ -579,7 +606,7 @@ class LMAT_WPBakery {
 		);
 		
 		// Also handle content between shortcode tags (e.g., [vc_column_text]content[/vc_column_text])
-		$content = self::expose_shortcode_content( $content );
+		$content = self::linguator_expose_shortcode_content( $content );
 
 		return $content;
 	}
@@ -594,7 +621,7 @@ class LMAT_WPBakery {
 	 * @param string $shortcode_tag The shortcode tag (e.g., 'vc_column_text').
 	 * @return array|null Shortcode definition array or null if not found.
 	 */
-	private static function get_wpbakery_shortcode_definition( $shortcode_tag ) {
+	private static function linguator_get_wpbakery_shortcode_definition( $shortcode_tag ) {
 		// Check if WPBakery API is available
 		if ( ! class_exists( 'WPBMap' ) || ! method_exists( 'WPBMap', 'getShortCode' ) ) {
 			return null;
@@ -624,7 +651,7 @@ class LMAT_WPBakery {
 	 * @param string $attr_val Attribute value.
 	 * @return bool True if attribute appears to be translatable.
 	 */
-	private static function is_attribute_translatable_by_heuristics( $attr_name, $attr_val ) {
+	private static function linguator_is_attribute_translatable_by_heuristics( $attr_name, $attr_val ) {
 		// Skip if value is empty or too short
 		if ( empty( $attr_val ) || strlen( trim( $attr_val ) ) < 2 ) {
 			return false;
@@ -676,7 +703,7 @@ class LMAT_WPBakery {
 	 * @param string &$append_content Reference to append_content string to add lmat_val tags.
 	 * @return string Processed JSON string with tokens replacing translatable values.
 	 */
-	private static function process_json_attribute( $json_string, $translatable_keys, &$append_content ) {
+	private static function linguator_process_json_attribute( $json_string, $translatable_keys, &$append_content ) {
 		// Skip if already tokenized
 		if ( strpos( $json_string, '___LMAT_' ) !== false ) {
 			return $json_string;
@@ -736,7 +763,7 @@ class LMAT_WPBakery {
 	 * @param string $html HTML content with data attributes.
 	 * @return string Cleaned HTML content.
 	 */
-	private static function clean_data_attributes( $html ) {
+	private static function linguator_clean_data_attributes( $html ) {
 		// Remove data-start and data-end attributes from all HTML tags
 		$html = preg_replace( '/\s+data-start="[^"]*"/', '', $html );
 		$html = preg_replace( '/\s+data-end="[^"]*"/', '', $html );
@@ -759,7 +786,7 @@ class LMAT_WPBakery {
 	 * @param string $shortcode_name The shortcode name (for token generation).
 	 * @return string HTML with text replaced by tokens + lmat_val tags with text only.
 	 */
-	private static function extract_translatable_text_nodes( $html, $shortcode_name ) {
+	private static function linguator_extract_translatable_text_nodes( $html, $shortcode_name ) {
 		// Separate existing lmat_val tags from HTML content
 		$existing_lmat_tags = array();
 		$html_without_lmat = preg_replace_callback(
@@ -773,7 +800,7 @@ class LMAT_WPBakery {
 		);
 		
 		// Clean data attributes first
-		$html_without_lmat = self::clean_data_attributes( $html_without_lmat );
+		$html_without_lmat = self::linguator_clean_data_attributes( $html_without_lmat );
 		
 		// Array to store new lmat_val tags
 		$new_lmat_tags = array();
@@ -881,7 +908,7 @@ class LMAT_WPBakery {
 	 * @param string $content Post content.
 	 * @return string Content with shortcode content exposed.
 	 */
-	private static function expose_shortcode_content( $content ) {
+	private static function linguator_expose_shortcode_content( $content ) {
 		// Match all WPBakery shortcodes with inner content dynamically (any [vc_*]...[/vc_*] pair)
 		$content = preg_replace_callback(
 			'/\[(vc_[\w-]+)([^\]]*)\](.*?)\[\/\1\]/s',
@@ -902,7 +929,7 @@ class LMAT_WPBakery {
 				if ( $has_nested_shortcodes ) {
 					// For container shortcodes (tabs, accordions), recursively process nested content
 					// This ensures content inside nested shortcodes is also extracted
-					$processed_inner = self::expose_shortcode_content( $inner_content );
+					$processed_inner = self::linguator_expose_shortcode_content( $inner_content );
 					
 					// If the inner content was modified (has tokens or lmat_val tags), use the processed version
 					if ( $processed_inner !== $inner_content ) {
@@ -925,7 +952,7 @@ class LMAT_WPBakery {
 				// If there's actual text content (not just whitespace), process it
 				if ( ! empty( trim( $text_content ) ) ) {
 					// Extract text nodes from HTML and create separate lmat_val tags
-					$processed_content = self::extract_translatable_text_nodes( $inner_content, $shortcode_name );
+					$processed_content = self::linguator_extract_translatable_text_nodes( $inner_content, $shortcode_name );
 					return '[' . $shortcode_name . $attributes . ']' . $processed_content . '[/' . $shortcode_name . ']';
 				}
 				
@@ -953,7 +980,7 @@ class LMAT_WPBakery {
 			
 			if ( ! empty( $remaining_text ) ) {
 				// There's text content that needs to be tokenized
-				$cleaned_content = self::clean_data_attributes( $remaining_text );
+				$cleaned_content = self::linguator_clean_data_attributes( $remaining_text );
 				$token = '___LMAT_' . md5( $shortcode_name . $remaining_text . wp_rand() ) . '___';
 				$new_lmat_tag = '[lmat_val id="' . $token . '"]' . $cleaned_content . '[/lmat_val]';
 				
@@ -973,7 +1000,7 @@ class LMAT_WPBakery {
 		}
 		
 		// Simple text content without HTML - wrap as before
-		$cleaned_content = self::clean_data_attributes( $inner_content );
+		$cleaned_content = self::linguator_clean_data_attributes( $inner_content );
 		$token = '___LMAT_' . md5( $shortcode_name . $inner_content . wp_rand() ) . '___';
 		$wrapped_content = '[lmat_val id="' . $token . '"]' . $cleaned_content . '[/lmat_val]';
 		return '[' . $shortcode_name . $attributes . ']' . $wrapped_content . '[/' . $shortcode_name . ']';
@@ -994,7 +1021,7 @@ class LMAT_WPBakery {
 	 * @param string $content Post content.
 	 * @return string Restored content.
 	 */
-	public static function restore_translatable_attributes( $content ) {
+	public static function linguator_restore_translatable_attributes( $content ) {
 		// Optimization check
 		if ( false === strpos( $content, '[lmat_val' ) && false === strpos( $content, '___LMAT' ) ) {
 			return $content;
@@ -1002,11 +1029,11 @@ class LMAT_WPBakery {
 
 		// Normalize quotes first (fix smart quotes introduced by translation around tokens)
 		// We do this BEFORE restoring values, so that we don't accidentally normalize quotes *inside* the translated text.
-		$content = self::normalize_shortcode_quotes( $content );
+		$content = self::linguator_normalize_shortcode_quotes( $content );
 		
 		// Restore protected attributes that were tokenized to prevent translation
 		// These are ID-based attributes that should never be translated
-		$content = self::restore_protected_attributes( $content );
+		$content = self::linguator_restore_protected_attributes( $content );
 		
 		// Create a map of tokens to their translated values
 		$token_map = array();
@@ -1056,7 +1083,7 @@ class LMAT_WPBakery {
 		// Restore JSON attributes (e.g., values in vc_progress_bar)
 		// These have tokens embedded inside URL-encoded JSON
 		if ( ! empty( $token_map ) ) {
-			$content = self::restore_json_attributes( $content, $token_map );
+			$content = self::linguator_restore_json_attributes( $content, $token_map );
 		}
 
 		// Cleanup any remaining lmat_val tags globally
@@ -1067,7 +1094,7 @@ class LMAT_WPBakery {
 		$content = self::remove_standalone_lmat_tokens( $content );
 		
 		// Remove page translation placeholders that might have been left in the content
-		$content = self::remove_page_translation_placeholders( $content );
+		$content = self::linguator_remove_page_translation_placeholders( $content );
 
 		return $content;
 	}
@@ -1086,7 +1113,7 @@ class LMAT_WPBakery {
 	 * @param array  $token_map Map of tokens to translated values.
 	 * @return string Content with JSON attributes restored.
 	 */
-	private static function restore_json_attributes( $content, $token_map ) {
+	private static function linguator_restore_json_attributes( $content, $token_map ) {
 		// Match attributes that contain URL-encoded data with tokens
 		// Pattern: attribute="...___LMAT_..._..."
 		$content = preg_replace_callback(
@@ -1144,24 +1171,28 @@ class LMAT_WPBakery {
 	 * @access private
 	 * @static
 	 *
-	 * @param string $content Post content with protected tokens.
+	 * @param string $content            Post content with protected tokens.
+	 * @param bool   $escape_for_display When true (e.g. the_content), escape decoded values for safe HTML attributes. When false (save/translation pipeline), return raw restored values.
 	 * @return string Content with original attribute values restored.
 	 */
-	private static function restore_protected_attributes( $content ) {
+	private static function linguator_restore_protected_attributes( $content, $escape_for_display = false ) {
 		// Pattern: ___LMAT_PROTECTED_{base64}___
 		// Find all protected tokens and decode them
 		// Base64 strings can contain A-Z, a-z, 0-9, +, /, and = (for padding)
 		// Handle both complete tokens (___LMAT_PROTECTED_...___) and potentially truncated ones
 		$content = preg_replace_callback(
 			'/___LMAT_PROTECTED_([A-Za-z0-9+\/=]+)(?:___|__|$)/',
-			function( $matches ) {
+			function( $matches ) use ( $escape_for_display ) {
 				$encoded_value = $matches[1];
 				// Decode the base64 value
 				$original_value = base64_decode( $encoded_value, true );
 				// If decoding fails, return empty string to remove the broken token
 				// This prevents broken tokens from appearing in the content
-				if ( false === $original_value || empty( $original_value ) ) {
+				if ( false === $original_value || '' === $original_value ) {
 					return '';
+				}
+				if ( $escape_for_display ) {
+					return esc_attr( $original_value );
 				}
 				return $original_value;
 			},
@@ -1186,23 +1217,23 @@ class LMAT_WPBakery {
 	 *
 	 * @return array Modified post data with encoded WPBakery attributes.
 	 */
-	public static function encode_wpbakery_content_before_save( $data, $postarr ) {
+	public static function linguator_encode_wpbakery_content_before_save( $data, $postarr ) {
 		// Only process if we have post_content
 		if ( empty( $data['post_content'] ) ) {
 			return $data;
 		}
 
 		// First, clean up any page translation placeholders
-		$data['post_content'] = self::remove_page_translation_placeholders( $data['post_content'] );
+		$data['post_content'] = self::linguator_remove_page_translation_placeholders( $data['post_content'] );
 		
 		// Second, restore exposed attributes (this also restores protected attributes)
 		if ( false !== strpos( $data['post_content'], '[lmat_val' ) || false !== strpos( $data['post_content'], '___LMAT' ) ) {
-			$data['post_content'] = self::restore_translatable_attributes( $data['post_content'] );
+			$data['post_content'] = self::linguator_restore_translatable_attributes( $data['post_content'] );
 		}
 		
 		// Also restore protected attributes separately in case they exist without lmat_val tags
 		if ( false !== strpos( $data['post_content'], '___LMAT_PROTECTED_' ) ) {
-			$data['post_content'] = self::restore_protected_attributes( $data['post_content'] );
+			$data['post_content'] = self::linguator_restore_protected_attributes( $data['post_content'] );
 		}
 		
 		// Remove any standalone LMAT tokens that weren't properly replaced
@@ -1323,7 +1354,7 @@ class LMAT_WPBakery {
 	 * @param string $content Post content.
 	 * @return string Content with normalized quotes.
 	 */
-	public static function normalize_shortcode_quotes( $content ) {
+	public static function linguator_normalize_shortcode_quotes( $content ) {
 		// Regex to find WPBakery shortcodes
 		// Handles [vc_...] up to the closing bracket ]
 		// We use a callback to only replace quotes *inside* the tag definition
@@ -1360,7 +1391,7 @@ class LMAT_WPBakery {
 	 * @param string $content Post content.
 	 * @return string Content with placeholders removed.
 	 */
-	public static function remove_page_translation_placeholders( $content ) {
+	public static function linguator_remove_page_translation_placeholders( $content ) {
 		// List of all page translation placeholders
 		$placeholders = array(
 			'#lmat_page_translation_open_translate_span#',
@@ -1398,7 +1429,7 @@ class LMAT_WPBakery {
 	 * @param string $content Post content.
 	 * @return string Cleaned content.
 	 */
-	public static function cleanup_content_on_frontend( $content ) {
+	public static function linguator_cleanup_content_on_frontend( $content ) {
 		// Check if content has any placeholders before processing
 		if ( false === strpos( $content, '#lmat_page_translation' ) && false === strpos( $content, '[lmat_val' ) && false === strpos( $content, '___LMAT_' ) ) {
 			return $content;
@@ -1409,16 +1440,17 @@ class LMAT_WPBakery {
 		
 		// Restore any protected attributes that might still be tokenized
 		if ( false !== strpos( $content, '___LMAT_PROTECTED_' ) ) {
-			$content = self::restore_protected_attributes( $content );
+			$content = self::linguator_restore_protected_attributes( $content, true );
 		}
 		
 		// Remove standalone LMAT tokens that weren't properly replaced
 		$content = self::remove_standalone_lmat_tokens( $content );
 		
 		// Remove page translation placeholders
-		$content = self::remove_page_translation_placeholders( $content );
-		
-		return $content;
+		$content = self::linguator_remove_page_translation_placeholders( $content );
+
+		return wp_kses_post( $content );
 	}
 }
+
 

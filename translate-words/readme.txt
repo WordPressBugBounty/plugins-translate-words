@@ -1,13 +1,13 @@
 === Linguator AI – Auto Translate & Create Multilingual Sites  ===
 
 Contributors: narinder-singh,satindersingh,coolplugins
-Tags: translation, multilingual, languages, ai translation 
+Tags: translation, multilingual, languages, ai translation
 Requires at least: 6.8
 Tested up to: 6.9
 Requires PHP: 7.2
-Stable tag: 2.0.6
-License: GPLv2 or later
-License URI: https://www.gnu.org/licenses/gpl-2.0.html
+Stable tag: 2.1.4
+License: GPLv3 or later
+License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
 Translate your WordPress website into multiple languages with AI. Linguator makes creating multilingual sites simple, fast, and SEO-friendly.
 
@@ -64,7 +64,17 @@ This plugin offers AI translation services via Chrome's built-in AI APIs. Learn 
 * [Chrome Summarizer API Documentation](https://developer.chrome.com/docs/ai/summarizer-api)
 * [Chrome Prompt API Documentation for Extensions](https://developer.chrome.com/docs/extensions/ai/prompt-api)
 
-[Linguator AI on GitHub.](https://github.com/CoolPluginsTeam/translate-words) 
+[Linguator AI on GitHub.](https://github.com/CoolPluginsTeam/translate-words)
+
+== Credits ==
+
+This plugin is a derivative work and a fork of the free version of  [Polylang](https://wordpress.org/plugins/polylang/) by WP SYNTEX.
+
+While the core of this plugin is a fork of the free version, it incorporates the Abstract_Screen class structure originally found in the WP_Syntex\Polylang_Pro\Editors\Screens namespace of Polylang Pro. This architecture has been refactored into the Linguator\Modules\Editors\Screens namespace to ensure a unique environment, maintain compatibility, and prevent naming collisions with the original plugin.
+
+This plugin is distributed under the terms of the GNU General Public License, version 3 (GPLv3). We are grateful to the original authors, Frédéric Demarle and the WP SYNTEX team, for their foundational work in the WordPress multilingual space.
+
+**Use of 3rd Party Services:** This plugin connects to the Cool Plugins API to display information about related plugins inside the dashboard. It offers optional usage tracking and feedback submission on deactivation only after explicit user consent. Additionally, it connects to Google Translate (Google LLC) via [translate.googleapis.com](translate.googleapis.com) and [translate.google.com](translate.google.com) to translate post, page, and taxonomy content. This plugin also uses the [DataTables](https://datatables.net/) library in the admin interface to display/manage tabular data. DataTables is licensed under the [MIT License](https://datatables.net/license/mit). Please review our [Data Usage Policy](https://my.coolplugins.net/terms/usage-tracking/), [TOS](https://my.coolplugins.net/terms/), and [Privacy Policy](https://my.coolplugins.net/terms/privacy-policy/), [Google Terms](https://policies.google.com/terms) of Service and [Google Privacy Policy](https://policies.google.com/privacy).
 
 == Screenshots ==
 1. Linguator Language Switcher Preview.
@@ -100,7 +110,7 @@ That's it! The setup configuration has been successfully completed. You can now 
 = Transition Notice =
 Translate Words is now maintained by [Cool Plugins](https://profiles.wordpress.org/coolplugins/) and will gradually evolve into our modern AI multilingual plugin, Linguator AI.
 
-The current Translate Words feature set will remain available until approximately 31st December 2026. After this period, the plugin will fully transition to Linguator.
+The current Translate Words feature set will remain available until 6 months. After this period, the plugin will fully transition to Linguator.
 
 If you want to continue using a manual string translation workflow, we recommend migrating to the Loco Translate plugin, which offers enhanced stability, better performance, and active development.
 
@@ -146,8 +156,57 @@ You can report security bugs through the Patchstack Vulnerability Disclosure Pro
 
 == Changelog ==
 > **Translate Words is evolving to Linguator**, our new AI-based multilingual solution.
-> The current functionality will remain available until around **31st December 2026**.
+> The current functionality will remain available until **6 months**.
 > If you prefer a manual string translation workflow, we recommend **Loco Translate**.
+
+= Version 2.1.4 | 3 April 2026 =
+* Minor Textual changes.
+* Fixed an issue with the Quick Edit page for unassigned languages.
+* Minor fixes.
+
+* Remove unused code.
+* Improve code quality and security.
+
+= Version 2.1.3 | 1 April 2026 =
+
+* Remove unused code.
+* Improve code quality and security.
+
+= Version 2.1.2 | 26 March 2026 =
+
+* Removed usage of HEREDOC/NOWDOC syntax and replaced with safer string handling methods.
+* Improved plugin path and URL handling by replacing hardcoded paths with WordPress standard functions like plugin_dir_path() and plugin_dir_url().
+* Strengthened REST API permission checks by adding proper capability validation for post creation actions.
+* Fixed unescaped output in content filters, ensuring all dynamic data is properly escaped to prevent XSS vulnerabilities.
+* Added missing nonce verification for user input handling to prevent CSRF attacks.
+* Improved code quality and security by implementing proper input validation and sanitization.
+
+= Version 2.1.1 | 20 March 2026 =
+
+* Implemented strict REST API permission_callback using current_user_can('edit_posts') for lmat/v1 endpoints.
+* Applied late escaping (esc_html, esc_attr, wp_kses_post) to all render callbacks and shortcode outputs.
+*  Refactored CSS and JS to use wp_enqueue_style and wp_enqueue_script, removing inline <style> and <script> tags.
+* Standardized unique prefixing (linguator_ ) across functions and classes to prevent conflicts.
+* Resolved UI logic that hidden string-translation features based on external plugin status.
+
+= Version 2.1.0 | 13 March 2026 =
+* Ensured manual string translation functionality remains accessible even when Loco Translate is active.
+* Replaced HEREDOC/NOWDOC syntax with standard PHP strings for better security scanning compatibility.
+* Updated bundled DataTables library to the latest stable version.
+* Added proper documentation in the readme for external services used by the plugin (Google Translate).
+* Improved REST API permission checks and strengthened capability validation.
+* Added missing nonce verification and improved input sanitization across admin and REST requests.
+* Implemented proper sanitization for register_setting() fields.
+* Replaced direct loading of WordPress core files with proper WordPress hooks.
+* Removed debugging code such as error_reporting() from production.
+* Improved escaping of variables and generated HTML output to prevent XSS vulnerabilities.
+* Refactored global filters to avoid unintended site-wide behavior changes.
+* Code quality, security, and compatibility improvements throughout the plugin.
+
+= Version 2.0.7 | 5 March 2026 =
+* Added proper attribution indicating that this plugin is a fork of the free Polylang plugin.
+* Corrected the license information in the header and readme file.
+* Minor textual changes.
 
 = Version 2.0.6 | 3 February 2026 =
 * Added translation for WPBakery Page Builder plugin.
@@ -228,6 +287,4 @@ You can report security bugs through the Patchstack Vulnerability Disclosure Pro
 
 == Upgrade Notice ==
 = 2.0.0 =
-Important Update: Translate Words is transitioning to our new AI-powered multilingual plugin, **Linguator AI**.
-The current Translate Words functionality will be deprecated around **31st December 2026**. You can continue using this plugin safely until then.
-If you prefer a manual string-based translation workflow, please migrate to **Loco Translate**.
+Translate Words is transitioning to our new AI-powered multilingual plugin Linguator AI. Existing functionality will remain available until around 31 December 2026. For manual string-based translation workflows, we recommend migrating to Loco Translate.

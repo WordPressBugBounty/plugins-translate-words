@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-use Linguator\Includes\Other\LMAT_Language;
+use Linguator\Includes\Other\Linguator_Language;
 use WP_List_Table;
 
 
@@ -22,7 +22,7 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
  *
  *  
  */
-class LMAT_Table_Languages extends WP_List_Table {
+class Linguator_Table_Languages extends WP_List_Table {
 
 	/**
 	 * Constructor
@@ -43,7 +43,7 @@ class LMAT_Table_Languages extends WP_List_Table {
 	 *
 	 *  
 	 *
-	 * @param LMAT_Language $item The language item.
+	 * @param Linguator_Language $item The language item.
 	 * @return void
 	 */
 	public function single_row( $item ) {
@@ -53,7 +53,7 @@ class LMAT_Table_Languages extends WP_List_Table {
 		 *  
 		 *
 		 * @param array        $classes The list of class names.
-		 * @param LMAT_Language $item    The language item.
+		 * @param Linguator_Language $item    The language item.
 		 */
 		$classes = apply_filters( 'lmat_languages_row_classes', array(), $item );
 		echo '<tr' . ( empty( $classes ) ? '>' : ' class="' . esc_attr( implode( ' ', $classes ) ) . '">' );
@@ -66,7 +66,7 @@ class LMAT_Table_Languages extends WP_List_Table {
 	 *
 	 *  
 	 *
-	 * @param LMAT_Language $item        The language item.
+	 * @param Linguator_Language $item        The language item.
 	 * @param string       $column_name The column name.
 	 * @return string|int
 	 */
@@ -83,7 +83,24 @@ class LMAT_Table_Languages extends WP_List_Table {
 				return $item->get_tax_prop( 'lmat_language', $column_name );
 
 			default:
-				return $item->$column_name; // Flag.
+				// Flag HTML is stored on the language object; keep output safe.
+				return wp_kses(
+					(string) $item->$column_name,
+					array(
+						'img' => array(
+							'src'   => true,
+							'alt'   => true,
+							'class' => true,
+							'width' => true,
+							'height'=> true,
+							'title' => true,
+						),
+						'span' => array(
+							'class' => true,
+							'title' => true,
+						),
+					)
+				);
 		}
 	}
 
@@ -93,14 +110,14 @@ class LMAT_Table_Languages extends WP_List_Table {
 	 *
 	 *  
 	 *
-	 * @param LMAT_Language $item The language item.
+	 * @param Linguator_Language $item The language item.
 	 * @return string
 	 */
 	public function column_name( $item ) {
 		return sprintf(
 			'<a title="%s" href="%s">%s</a>',
-			esc_attr__( 'Edit this language', 'linguator-multilingual-ai-translation' ),
-			esc_url( admin_url( 'admin.php?page=lmat&amp;lmat_action=edit&amp;lang=' . $item->term_id ) ),
+			esc_attr__( 'Edit this language', 'translate-words' ),
+			esc_url( wp_nonce_url( admin_url( 'admin.php?page=lmat&amp;lmat_action=edit&amp;lang=' . $item->term_id ), 'edit-lang' ) ),
 			esc_html( $item->name )
 		);
 	}
@@ -111,7 +128,7 @@ class LMAT_Table_Languages extends WP_List_Table {
 	 *
 	 *  
 	 *
-	 * @param LMAT_Language $item The language item.
+	 * @param Linguator_Language $item The language item.
 	 * @return string
 	 */
 	public function column_default_lang( $item ) {
@@ -120,10 +137,10 @@ class LMAT_Table_Languages extends WP_List_Table {
 				'<div class="row-actions"><span class="default-lang">
 				<a class="icon-default-lang" title="%1$s" href="%2$s"><span class="screen-reader-text">%3$s</span></a>
 				</span></div>',
-				esc_attr__( 'Select as default language', 'linguator-multilingual-ai-translation' ),
+				esc_attr__( 'Select as default language', 'translate-words' ),
 				wp_nonce_url( '?page=lmat&amp;lmat_action=default-lang&amp;noheader=true&amp;lang=' . $item->term_id, 'default-lang' ),
 				/* translators: accessibility text, %s is a native language name */
-				esc_html( sprintf( __( 'Choose %s as default language', 'linguator-multilingual-ai-translation' ), $item->name ) )
+				esc_html( sprintf( __( 'Choose %s as default language', 'translate-words' ), $item->name ) )
 			);
 
 			/**
@@ -132,14 +149,14 @@ class LMAT_Table_Languages extends WP_List_Table {
 			 *  
 			 *
 			 * @param string       $s    The html markup of the action.
-			 * @param LMAT_Language $item The language item.
+			 * @param Linguator_Language $item The language item.
 			 */
 			$s = apply_filters( 'lmat_default_lang_row_action', $s, $item );
 		} else {
 			$s = sprintf(
 				'<span class="icon-default-lang"><span class="screen-reader-text">%1$s</span></span>',
 				/* translators: accessibility text */
-				esc_html__( 'Default language', 'linguator-multilingual-ai-translation' )
+				esc_html__( 'Default language', 'translate-words' )
 			);
 		}
 
@@ -155,13 +172,13 @@ class LMAT_Table_Languages extends WP_List_Table {
 	 */
 	public function get_columns() {
 		return array(
-			'name'         => esc_html__( 'Full name', 'linguator-multilingual-ai-translation' ),
-			'locale'       => esc_html__( 'Locale', 'linguator-multilingual-ai-translation' ),
-			'slug'         => esc_html__( 'Code', 'linguator-multilingual-ai-translation' ),
-			'default_lang' => sprintf( '<span title="%1$s" class="icon-default-lang"><span class="screen-reader-text">%2$s</span></span>', esc_attr__( 'Default language', 'linguator-multilingual-ai-translation' ), esc_html__( 'Default language', 'linguator-multilingual-ai-translation' ) ),
-			'term_group'   => esc_html__( 'Order', 'linguator-multilingual-ai-translation' ),
-			'flag'         => esc_html__( 'Flag', 'linguator-multilingual-ai-translation' ),
-			'count'        => esc_html__( 'Posts', 'linguator-multilingual-ai-translation' ),
+			'name'         => esc_html__( 'Full name', 'translate-words' ),
+			'locale'       => esc_html__( 'Locale', 'translate-words' ),
+			'slug'         => esc_html__( 'Code', 'translate-words' ),
+			'default_lang' => sprintf( '<span title="%1$s" class="icon-default-lang"><span class="screen-reader-text">%2$s</span></span>', esc_attr__( 'Default language', 'translate-words' ), esc_html__( 'Default language', 'translate-words' ) ),
+			'term_group'   => esc_html__( 'Order', 'translate-words' ),
+			'flag'         => esc_html__( 'Flag', 'translate-words' ),
+			'count'        => esc_html__( 'Posts', 'translate-words' ),
 		);
 	}
 
@@ -198,7 +215,7 @@ class LMAT_Table_Languages extends WP_List_Table {
 	 *
 	 *  
 	 *
-	 * @param LMAT_Language $item        The language item being acted upon.
+	 * @param Linguator_Language $item        The language item being acted upon.
 	 * @param string       $column_name Current column name.
 	 * @param string       $primary     Primary column name.
 	 * @return string The row actions output.
@@ -211,16 +228,16 @@ class LMAT_Table_Languages extends WP_List_Table {
 		$actions = array(
 			'edit'   => sprintf(
 				'<a title="%s" href="%s">%s</a>',
-				esc_attr__( 'Edit this language', 'linguator-multilingual-ai-translation' ),
-				esc_url( admin_url( 'admin.php?page=lmat&amp;lmat_action=edit&amp;lang=' . $item->term_id ) ),
-				esc_html__( 'Edit', 'linguator-multilingual-ai-translation' )
+				esc_attr__( 'Edit this language', 'translate-words' ),
+				esc_url( wp_nonce_url( admin_url( 'admin.php?page=lmat&amp;lmat_action=edit&amp;lang=' . $item->term_id ), 'edit-lang' ) ),
+				esc_html__( 'Edit', 'translate-words' )
 			),
 			'delete' => sprintf(
 				'<a title="%s" href="%s" onclick = "return confirm( \'%s\' );">%s</a>',
-				esc_attr__( 'Delete this language and all its associated data', 'linguator-multilingual-ai-translation' ),
+				esc_attr__( 'Delete this language and all its associated data', 'translate-words' ),
 				wp_nonce_url( '?page=lmat&amp;lmat_action=delete&amp;noheader=true&amp;lang=' . $item->term_id, 'delete-lang' ),
-				esc_js( __( 'You are about to permanently delete this language. Are you sure?', 'linguator-multilingual-ai-translation' ) ),
-				esc_html__( 'Delete', 'linguator-multilingual-ai-translation' )
+				esc_js( __( 'You are about to permanently delete this language. Are you sure?', 'translate-words' ) ),
+				esc_html__( 'Delete', 'translate-words' )
 			),
 		);
 
@@ -230,7 +247,7 @@ class LMAT_Table_Languages extends WP_List_Table {
 		 *  
 		 *
 		 * @param array        $actions A list of html markup actions.
-		 * @param LMAT_Language $item    The language item.
+		 * @param Linguator_Language $item    The language item.
 		 */
 		$actions = apply_filters( 'lmat_languages_row_actions', $actions, $item );
 
@@ -242,12 +259,14 @@ class LMAT_Table_Languages extends WP_List_Table {
 	 *
 	 *  
 	 *
-	 * @param LMAT_Language $a The first language to compare.
-	 * @param LMAT_Language $b The second language to compare.
+	 * @param Linguator_Language $a The first language to compare.
+	 * @param Linguator_Language $b The second language to compare.
 	 * @return int -1 or 1 if $a is considered to be respectively less than or greater than $b.
 	 */
 	protected function usort_reorder( $a, $b ) {
-		$orderby = ! empty( $_GET['orderby'] ) ? sanitize_key( $_GET['orderby'] ) : 'name'; // phpcs:ignore WordPress.Security.NonceVerification
+		$orderby = ! empty( $_GET['orderby'] ) ? sanitize_key( wp_unslash( $_GET['orderby'] ) ) : 'name'; // phpcs:ignore WordPress.Security.NonceVerification
+		$order   = ! empty( $_GET['order'] ) ? sanitize_key( wp_unslash( $_GET['order'] ) ) : 'asc'; // phpcs:ignore WordPress.Security.NonceVerification
+		$order   = in_array( $order, array( 'asc', 'desc' ), true ) ? $order : 'asc';
 		// Determine sort order
 		if ( is_numeric( $a->$orderby ) ) {
 			$result = $a->$orderby > $b->$orderby ? 1 : -1;
@@ -255,7 +274,7 @@ class LMAT_Table_Languages extends WP_List_Table {
 			$result = strcmp( $a->$orderby, $b->$orderby );
 		}
 		// Send final sort direction to usort.
-		return ( empty( $_GET['order'] ) || 'asc' === $_GET['order'] ) ? $result : -$result; // phpcs:ignore WordPress.Security.NonceVerification
+		return ( 'asc' === $order ) ? $result : -$result;
 	}
 
 	/**
@@ -263,7 +282,7 @@ class LMAT_Table_Languages extends WP_List_Table {
 	 *
 	 *  
 	 *
-	 * @param LMAT_Language[] $data The list of languages.
+	 * @param Linguator_Language[] $data The list of languages.
 	 * @return void
 	 */
 	public function prepare_items( $data = array() ) {

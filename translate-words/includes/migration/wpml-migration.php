@@ -163,7 +163,7 @@ class WPML_Migration {
 		}
 
 		// Count active languages
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$wpml_languages_count = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$icl_languages_table} WHERE active = %d",
@@ -181,7 +181,7 @@ class WPML_Migration {
 		}
 
 		// Count post translations (grouped by trid)
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$post_translations_count = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(DISTINCT trid) 
@@ -196,7 +196,7 @@ class WPML_Migration {
 		// phpcs:enable
 
 		// Count term translations (grouped by trid)
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$term_translations_count = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(DISTINCT trid) 
@@ -211,7 +211,7 @@ class WPML_Migration {
 		// phpcs:enable
 
 		// Count posts with language assignments
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$posts_count = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(DISTINCT element_id) 
@@ -228,7 +228,7 @@ class WPML_Migration {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$strings_table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $icl_strings_table ) ) === $icl_strings_table;
 		if ( $strings_table_exists ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$strings_count = (int) $wpdb->get_var(
 				$wpdb->prepare(
 					"SELECT COUNT(*) FROM {$icl_strings_table} WHERE value IS NOT NULL AND value != %s",
@@ -267,7 +267,7 @@ class WPML_Migration {
 		$icl_flags_table = $wpdb->prefix . 'icl_flags';
 
 		// Get active WPML languages
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$wpml_languages = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT * FROM {$icl_languages_table} WHERE active = %d ORDER BY id ASC",
@@ -278,7 +278,7 @@ class WPML_Migration {
 
 		if ( empty( $wpml_languages ) ) {
 			$results['success'] = false;
-			$results['errors'][] = __( 'No WPML languages found.', 'linguator-multilingual-ai-translation' );
+			$results['errors'][] = __( 'No WPML languages found.', 'translate-words' );
 			return $results;
 		}
 
@@ -315,7 +315,7 @@ class WPML_Migration {
 			if ( empty( $wpml_lang->english_name ) ) {
 				$results['errors'][] = sprintf(
 					/* translators: %s: Language code */
-					__( 'Failed to migrate language with code %s: missing language name', 'linguator-multilingual-ai-translation' ),
+					__( 'Failed to migrate language with code %s: missing language name', 'translate-words' ),
 					$wpml_lang->code
 				);
 				$results['success'] = false;
@@ -325,7 +325,7 @@ class WPML_Migration {
 			if ( empty( $wpml_lang->code ) ) {
 				$results['errors'][] = sprintf(
 					/* translators: %s: Language name */
-					__( 'Failed to migrate language %s: missing language code', 'linguator-multilingual-ai-translation' ),
+					__( 'Failed to migrate language %s: missing language code', 'translate-words' ),
 					$wpml_lang->english_name
 				);
 				$results['success'] = false;
@@ -335,7 +335,7 @@ class WPML_Migration {
 			if ( empty( $wpml_lang->default_locale ) ) {
 				$results['errors'][] = sprintf(
 					/* translators: %1$s: Language name, %2$s: Language code */
-					__( 'Failed to migrate language %1$s (%2$s): missing locale', 'linguator-multilingual-ai-translation' ),
+					__( 'Failed to migrate language %1$s (%2$s): missing locale', 'translate-words' ),
 					$wpml_lang->english_name,
 					$wpml_lang->code
 				);
@@ -360,7 +360,7 @@ class WPML_Migration {
 					$error_message = ! empty( $error_messages ) ? ' (' . implode( ', ', $error_messages ) . ')' : '';
 					$results['errors'][] = sprintf(
 						/* translators: %1$s: Language name, %2$s: Error details */
-						__( 'Failed to update flag for language: %1$s%2$s', 'linguator-multilingual-ai-translation' ),
+						__( 'Failed to update flag for language: %1$s%2$s', 'translate-words' ),
 						$wpml_lang->english_name,
 						$error_message
 					);
@@ -398,7 +398,7 @@ class WPML_Migration {
 				
 				$results['errors'][] = sprintf(
 					/* translators: %1$s: Language name, %2$s: Error details */
-					__( 'Failed to migrate language: %1$s%2$s', 'linguator-multilingual-ai-translation' ),
+					__( 'Failed to migrate language: %1$s%2$s', 'translate-words' ),
 					$wpml_lang->english_name,
 					$error_message
 				);
@@ -428,7 +428,7 @@ class WPML_Migration {
 	 *
 	 * @return array Migration result.
 	 */
-	public function migrate_language_assignments() {
+	public function linguator_migrate_language_assignments() {
 		global $wpdb;
 
 		$results = array(
@@ -444,7 +444,7 @@ class WPML_Migration {
 		$language_cache = array();
 
 		// Migrate post language assignments
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$posts_with_language = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT DISTINCT element_id, language_code 
@@ -462,7 +462,7 @@ class WPML_Migration {
 				return (int) $item->element_id;
 			}, $posts_with_language );
 			
-			$existing_post_languages = $this->get_existing_post_language_assignments( $post_ids );
+			$existing_post_languages = $this->linguator_get_existing_post_language_assignments( $post_ids );
 
 			// ========== OPTIMIZE: Prepare language term IDs for bulk operations ==========
 			$bulk_assignments = array();
@@ -481,9 +481,9 @@ class WPML_Migration {
 					$language_cache[ $lang_code ] = $this->model->languages->get( $lang_code );
 				}
 
-				$lmat_lang = $language_cache[ $lang_code ];
-				if ( $lmat_lang ) {
-					$lang_tt_id = $lmat_lang->get_tax_prop( 'lmat_language', 'term_taxonomy_id' );
+				$linguator_lang = $language_cache[ $lang_code ];
+				if ( $linguator_lang ) {
+					$lang_tt_id = $linguator_lang->get_tax_prop( 'lmat_language', 'term_taxonomy_id' );
 					if ( $lang_tt_id ) {
 						$bulk_assignments[] = array(
 							'object_id' => $post_id,
@@ -495,7 +495,7 @@ class WPML_Migration {
 
 			// ========== BULK INSERT post language assignments ==========
 			if ( ! empty( $bulk_assignments ) ) {
-				$results['posts_assigned'] = $this->bulk_insert_term_relationships( $bulk_assignments );
+				$results['posts_assigned'] = $this->linguator_bulk_insert_term_relationships( $bulk_assignments );
 				
 				// Invalidate cache after bulk insert
 				wp_cache_delete( 'last_changed', 'posts' );
@@ -505,7 +505,7 @@ class WPML_Migration {
 		// Migrate term language assignments
 		// In WPML, terms are stored with element_type like 'tax_category', 'tax_post_tag', etc.
 		// The element_id is the term_taxonomy_id, not the term_id
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$terms_with_language = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT DISTINCT t.term_id, icl.language_code
@@ -525,7 +525,7 @@ class WPML_Migration {
 				return (int) $item->term_id;
 			}, $terms_with_language );
 			
-			$existing_term_languages = $this->get_existing_term_language_assignments( $term_ids );
+			$existing_term_languages = $this->linguator_get_existing_term_language_assignments( $term_ids );
 
 			// ========== OPTIMIZE: Prepare term language assignments for bulk operations ==========
 			$bulk_term_assignments = array();
@@ -544,9 +544,9 @@ class WPML_Migration {
 					$language_cache[ $lang_code ] = $this->model->languages->get( $lang_code );
 				}
 
-				$lmat_lang = $language_cache[ $lang_code ];
-				if ( $lmat_lang ) {
-					$lang_tt_id = $lmat_lang->get_tax_prop( 'lmat_term_language', 'term_taxonomy_id' );
+				$linguator_lang = $language_cache[ $lang_code ];
+				if ( $linguator_lang ) {
+					$lang_tt_id = $linguator_lang->get_tax_prop( 'lmat_term_language', 'term_taxonomy_id' );
 					if ( $lang_tt_id ) {
 						$bulk_term_assignments[] = array(
 							'object_id' => $term_id,
@@ -558,7 +558,7 @@ class WPML_Migration {
 
 			// ========== BULK INSERT term language assignments ==========
 			if ( ! empty( $bulk_term_assignments ) ) {
-				$results['terms_assigned'] = $this->bulk_insert_term_relationships( $bulk_term_assignments );
+				$results['terms_assigned'] = $this->linguator_bulk_insert_term_relationships( $bulk_term_assignments );
 				
 				// Invalidate cache after bulk insert
 				wp_cache_delete( 'last_changed', 'terms' );
@@ -590,7 +590,7 @@ class WPML_Migration {
 
 		// Migrate post translations
 		// Group by trid to get translation groups
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$post_translation_groups = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT trid, GROUP_CONCAT(CONCAT(language_code, ':', element_id) SEPARATOR '|') as translations
@@ -613,11 +613,24 @@ class WPML_Migration {
 
 			foreach ( $post_translation_groups as $group ) {
 				// Parse translations: "en:123|fr:456|de:789"
+				if ( empty( $group->translations ) || ! is_string( $group->translations ) ) {
+					continue;
+				}
+
 				$translations_parts = explode( '|', $group->translations );
-				$lmat_translations = array();
+				$linguator_translations = array();
 
 				foreach ( $translations_parts as $part ) {
-					list( $lang_code, $post_id ) = explode( ':', $part, 2 );
+					if ( false === strpos( $part, ':' ) ) {
+						continue;
+					}
+
+					$pieces = explode( ':', $part, 2 );
+					if ( count( $pieces ) < 2 ) {
+						continue;
+					}
+
+					list( $lang_code, $post_id ) = $pieces;
 					$post_id = (int) $post_id;
 
 					// ========== OPTIMIZE: Use cached language lookup ==========
@@ -625,14 +638,14 @@ class WPML_Migration {
 						$language_cache[ $lang_code ] = $this->model->languages->get( $lang_code );
 					}
 
-					$lmat_lang = $language_cache[ $lang_code ];
-					if ( $lmat_lang ) {
-						$lmat_translations[ $lang_code ] = $post_id;
+					$linguator_lang = $language_cache[ $lang_code ];
+					if ( $linguator_lang ) {
+						$linguator_translations[ $lang_code ] = $post_id;
 					}
 				}
 
-				if ( count( $lmat_translations ) > 1 ) {
-					$post_translation_sets[] = $lmat_translations;
+				if ( count( $linguator_translations ) > 1 ) {
+					$post_translation_sets[] = $linguator_translations;
 				}
 			}
 
@@ -645,7 +658,7 @@ class WPML_Migration {
 
 		// Migrate term translations
 		// Group by trid to get translation groups
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$term_translation_groups = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT trid, GROUP_CONCAT(CONCAT(icl.language_code, ':', t.term_id) SEPARATOR '|') as translations
@@ -671,10 +684,23 @@ class WPML_Migration {
 
 			// First pass: collect all term IDs and their expected languages
 			foreach ( $term_translation_groups as $group ) {
+				if ( empty( $group->translations ) || ! is_string( $group->translations ) ) {
+					continue;
+				}
+
 				$translations_parts = explode( '|', $group->translations );
 				
 				foreach ( $translations_parts as $part ) {
-					list( $lang_code, $term_id ) = explode( ':', $part, 2 );
+					if ( false === strpos( $part, ':' ) ) {
+						continue;
+					}
+
+					$pieces = explode( ':', $part, 2 );
+					if ( count( $pieces ) < 2 ) {
+						continue;
+					}
+
+					list( $lang_code, $term_id ) = $pieces;
 					$term_id = (int) $term_id;
 					
 					// Cache language lookup
@@ -692,7 +718,7 @@ class WPML_Migration {
 			// ========== OPTIMIZE: Bulk fetch existing term language assignments ==========
 			$existing_term_languages = array();
 			if ( ! empty( $all_term_ids ) ) {
-				$existing_term_languages = $this->get_existing_term_language_assignments( array_unique( $all_term_ids ) );
+				$existing_term_languages = $this->linguator_get_existing_term_language_assignments( array_unique( $all_term_ids ) );
 			}
 
 			// ========== OPTIMIZE: Prepare bulk term language assignments for terms that need them ==========
@@ -703,9 +729,9 @@ class WPML_Migration {
 				
 				// Only assign language if missing or incorrect
 				if ( ! $current_lang || $current_lang !== $expected_lang_code ) {
-					$lmat_lang = $language_cache[ $expected_lang_code ];
-					if ( $lmat_lang ) {
-						$lang_tt_id = $lmat_lang->get_tax_prop( 'lmat_term_language', 'term_taxonomy_id' );
+					$linguator_lang = $language_cache[ $expected_lang_code ];
+					if ( $linguator_lang ) {
+						$lang_tt_id = $linguator_lang->get_tax_prop( 'lmat_term_language', 'term_taxonomy_id' );
 						if ( $lang_tt_id ) {
 							$bulk_term_language_assignments[] = array(
 								'object_id' => $term_id,
@@ -718,7 +744,7 @@ class WPML_Migration {
 
 			// ========== BULK INSERT: Assign all term languages at once ==========
 			if ( ! empty( $bulk_term_language_assignments ) ) {
-				$this->bulk_insert_term_relationships( $bulk_term_language_assignments );
+				$this->linguator_bulk_insert_term_relationships( $bulk_term_language_assignments );
 				wp_cache_delete( 'last_changed', 'terms' );
 			}
 
@@ -727,22 +753,35 @@ class WPML_Migration {
 
 			foreach ( $term_translation_groups as $group ) {
 				// Parse translations: "en:123|fr:456|de:789"
+				if ( empty( $group->translations ) || ! is_string( $group->translations ) ) {
+					continue;
+				}
+
 				$translations_parts = explode( '|', $group->translations );
-				$lmat_translations = array();
+				$linguator_translations = array();
 
 				foreach ( $translations_parts as $part ) {
-					list( $lang_code, $term_id ) = explode( ':', $part, 2 );
+					if ( false === strpos( $part, ':' ) ) {
+						continue;
+					}
+
+					$pieces = explode( ':', $part, 2 );
+					if ( count( $pieces ) < 2 ) {
+						continue;
+					}
+
+					list( $lang_code, $term_id ) = $pieces;
 					$term_id = (int) $term_id;
 
 					// Use cached language (already fetched in first pass)
-					$lmat_lang = isset( $language_cache[ $lang_code ] ) ? $language_cache[ $lang_code ] : null;
-					if ( $lmat_lang ) {
-						$lmat_translations[ $lang_code ] = $term_id;
+					$linguator_lang = isset( $language_cache[ $lang_code ] ) ? $language_cache[ $lang_code ] : null;
+					if ( $linguator_lang ) {
+						$linguator_translations[ $lang_code ] = $term_id;
 					}
 				}
 
-				if ( count( $lmat_translations ) > 1 ) {
-					$term_translation_sets[] = $lmat_translations;
+				if ( count( $linguator_translations ) > 1 ) {
+					$term_translation_sets[] = $linguator_translations;
 				}
 			}
 
@@ -830,7 +869,7 @@ class WPML_Migration {
 				}
 			}
 			if ( ! empty( $domains ) ) {
-				$domains = $this->convert_language_slugs_in_array( $domains );
+				$domains = $this->linguator_convert_language_slugs_in_array( $domains );
 				if ( ! empty( $domains ) ) {
 					$this->options->set( 'domains', $domains );
 					$results['migrated'][] = 'domains';
@@ -925,14 +964,14 @@ class WPML_Migration {
 	 * @param array $array Array that may contain language slugs.
 	 * @return array Converted array.
 	 */
-	private function convert_language_slugs_in_array( $array ) {
+	private function linguator_convert_language_slugs_in_array( $array ) {
 		foreach ( $array as $key => $value ) {
 			if ( is_array( $value ) ) {
-				$array[ $key ] = $this->convert_language_slugs_in_array( $value );
+				$array[ $key ] = $this->linguator_convert_language_slugs_in_array( $value );
 			} elseif ( is_string( $key ) ) {
 				// Check if key is a language slug
-				$lmat_lang = $this->model->languages->get( $key );
-				if ( ! $lmat_lang ) {
+				$linguator_lang = $this->model->languages->get( $key );
+				if ( ! $linguator_lang ) {
 					// Key might be a WPML slug that doesn't exist in Linguator, skip it
 					unset( $array[ $key ] );
 				}
@@ -1023,7 +1062,7 @@ class WPML_Migration {
 			if ( ! $lmat_lang ) {
 				$results['errors'][] = sprintf(
 					/* translators: %s: Language code */
-					__( 'Linguator language not found for WPML language: %s', 'linguator-multilingual-ai-translation' ),
+					__( 'Linguator language not found for WPML language: %s', 'translate-words' ),
 					$lang_code
 				);
 				$results['success'] = false;
@@ -1047,7 +1086,7 @@ class WPML_Migration {
 			// Add WPML strings (will overwrite if duplicate)
 			$strings_added = 0;
 			foreach ( $strings as $string_pair ) {
-				$original = wp_unslash( $string_pair['original'] );
+				$original    = wp_unslash( $string_pair['original'] );
 				$translation = wp_unslash( $string_pair['translation'] );
 
 				// Skip empty strings
@@ -1060,46 +1099,44 @@ class WPML_Migration {
 				$strings_added++;
 			}
 
+			// If there is nothing new to add for this language, skip quietly.
+			if ( 0 === $strings_added && empty( $lmat_strings ) ) {
+				continue;
+			}
+
 			// Convert back to array format and save
 			$merged_strings = array_values( $strings_map );
 
 			// Update term meta with merged strings
 			update_term_meta( $lmat_lang->term_id, '_lmat_strings_translations', $merged_strings );
 
-			// Verify the update was successful
+			// Verify the update was successful only when we actually attempted to add strings.
 			$stored_meta = get_term_meta( $lmat_lang->term_id, '_lmat_strings_translations', true );
 
-			if ( is_array( $stored_meta ) && ! empty( $stored_meta ) ) {
-				$stored_count = count( $stored_meta );
+			if ( is_array( $stored_meta ) && ! empty( $stored_meta ) && $strings_added > 0 ) {
+				$stored_count   = count( $stored_meta );
 				$expected_count = count( $merged_strings );
 
-				if ( $stored_count >= $expected_count || ( $stored_count > 0 && $strings_added > 0 ) ) {
-					$results['strings_migrated'] += $strings_added;
+				if ( $stored_count >= $expected_count ) {
+					$results['strings_migrated']   += $strings_added;
 					$results['languages_processed']++;
 				} else {
 					$results['errors'][] = sprintf(
 						/* translators: %1$s: Language code, %2$d: Stored count, %3$d: Expected count */
-						__( 'Failed to save strings for language: %1$s (stored: %2$d, expected: %3$d)', 'linguator-multilingual-ai-translation' ),
+						__( 'Failed to save strings for language: %1$s (stored: %2$d, expected: %3$d)', 'translate-words' ),
 						$lmat_lang->slug,
 						$stored_count,
 						$expected_count
 					);
 					$results['success'] = false;
 				}
-			} else {
-				$results['errors'][] = sprintf(
-					/* translators: %s: Language code */
-					__( 'Failed to save strings for language: %s (no strings stored)', 'linguator-multilingual-ai-translation' ),
-					$lmat_lang->slug
-				);
-				$results['success'] = false;
 			}
 		}
 
 		// Clear cache after migration
 		if ( $results['strings_migrated'] > 0 ) {
-			if ( class_exists( '\Linguator\Includes\Helpers\LMAT_Cache' ) ) {
-				$cache = new \Linguator\Includes\Helpers\LMAT_Cache();
+			if ( class_exists( '\Linguator\Includes\Helpers\Linguator_Cache' ) ) {
+				$cache = new \Linguator\Includes\Helpers\Linguator_Cache();
 				foreach ( $wpml_languages as $wpml_lang ) {
 					$lmat_lang = $this->model->languages->get( $wpml_lang );
 					if ( $lmat_lang ) {
@@ -1143,7 +1180,7 @@ class WPML_Migration {
 
 		// Always migrate language assignments after languages are migrated
 		if ( $migrate_languages && $results['success'] ) {
-			$assignments_results = $this->migrate_language_assignments();
+			$assignments_results = $this->linguator_migrate_language_assignments();
 			$results['language_assignments'] = $assignments_results;
 			if ( ! $assignments_results['success'] ) {
 				$results['success'] = false;
@@ -1193,7 +1230,7 @@ class WPML_Migration {
 	 * @param array $post_ids Array of post IDs to check.
 	 * @return array Associative array with post_id => language_slug.
 	 */
-	private function get_existing_post_language_assignments( $post_ids ) {
+	private function linguator_get_existing_post_language_assignments( $post_ids ) {
 		global $wpdb;
 
 		if ( empty( $post_ids ) ) {
@@ -1222,8 +1259,9 @@ class WPML_Migration {
 		// Prepare arguments: taxonomy name first, then post IDs
 		$prepare_args = array_merge( array( 'lmat_language' ), $post_ids );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$results = $wpdb->get_results(
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			call_user_func_array( array( $wpdb, 'prepare' ), array_merge( array( $query ), $prepare_args ) )
 		);
 		// phpcs:enable
@@ -1244,7 +1282,7 @@ class WPML_Migration {
 	 * @param array $term_ids Array of term IDs to check.
 	 * @return array Associative array with term_id => language_slug.
 	 */
-	private function get_existing_term_language_assignments( $term_ids ) {
+	private function linguator_get_existing_term_language_assignments( $term_ids ) {
 		global $wpdb;
 
 		if ( empty( $term_ids ) ) {
@@ -1273,7 +1311,7 @@ class WPML_Migration {
 		// Prepare arguments: taxonomy name first, then term IDs
 		$prepare_args = array_merge( array( 'lmat_term_language' ), $term_ids );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$results = $wpdb->get_results(
 			call_user_func_array( array( $wpdb, 'prepare' ), array_merge( array( $query ), $prepare_args ) )
 		);
@@ -1295,7 +1333,7 @@ class WPML_Migration {
 	 * @param array $assignments Array of assignments with 'object_id' and 'term_taxonomy_id'.
 	 * @return int Number of rows inserted.
 	 */
-	private function bulk_insert_term_relationships( $assignments ) {
+	private function linguator_bulk_insert_term_relationships( $assignments ) {
 		global $wpdb;
 
 		if ( empty( $assignments ) ) {
@@ -1331,7 +1369,7 @@ class WPML_Migration {
 				$placeholders = implode( ',', array_fill( 0, count( $term_taxonomy_ids ), '%d' ) );
 				
 				// Get taxonomy names to determine if we're counting posts or terms
-				// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 				$taxonomies = $wpdb->get_results(
 					$wpdb->prepare(
 						"SELECT DISTINCT term_taxonomy_id, taxonomy 
@@ -1360,7 +1398,7 @@ class WPML_Migration {
 					
 					// Get all distinct post types that actually have language assignments
 					// This ensures we count all custom post types, not just configured ones
-					// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 					$post_types = $wpdb->get_col(
 						$wpdb->prepare(
 							"SELECT DISTINCT p.post_type
@@ -1385,7 +1423,7 @@ class WPML_Migration {
 					$post_type_placeholders = implode( ',', array_fill( 0, count( $post_types ), '%s' ) );
 					
 					// Update counts excluding trashed posts and only counting published posts
-					// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 					$wpdb->query(
 						$wpdb->prepare(
 							"UPDATE {$wpdb->term_taxonomy} tt
@@ -1424,7 +1462,7 @@ class WPML_Migration {
 				if ( ! empty( $term_lang_tt_ids ) ) {
 					$term_placeholders = implode( ',', array_fill( 0, count( $term_lang_tt_ids ), '%d' ) );
 					
-					// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 					$wpdb->query(
 						$wpdb->prepare(
 							"UPDATE {$wpdb->term_taxonomy} tt

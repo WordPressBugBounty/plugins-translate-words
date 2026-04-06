@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 
-use Linguator\Includes\Other\LMAT_Model;
+use Linguator\Includes\Other\Linguator_Model;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -39,7 +39,7 @@ class Settings extends Abstract_Controller {
 	private $languages;
 
 	/**
-	 * @var LMAT_Model
+	 * @var Linguator_Model
 	 */
 	private $model;
 
@@ -79,9 +79,9 @@ class Settings extends Abstract_Controller {
 	 *
 	 *  
 	 *
-	 * @param LMAT_Model $model Linguator's model.
+	 * @param Linguator_Model $model Linguator's model.
 	 */
-	public function __construct( LMAT_Model $model ) {
+	public function __construct( Linguator_Model $model ) {
 		$this->namespace = 'lmat/v1';
 		$this->rest_base = 'settings';
 		$this->model     = $model;
@@ -105,7 +105,7 @@ class Settings extends Abstract_Controller {
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_item' ),
-					'permission_callback' => array( $this, 'update_item_permissions_check' ),
+					'permission_callback' => array( $this, 'get_item_permissions_check' ),
 				),
 				array(
 					'methods'             => WP_REST_Server::EDITABLE,
@@ -129,8 +129,10 @@ class Settings extends Abstract_Controller {
 					'permission_callback' => array( $this, 'update_item_permissions_check' ),
 					'args'                => array(
 						'status' => array(
-							'required' => true,
-							'type'     => 'boolean',
+							'required'          => true,
+							'type'              => 'boolean',
+							'sanitize_callback' => array( $this, 'sanitize_boolean_param' ),
+							'validate_callback' => array( $this, 'validate_boolean_param' ),
 						),
 					),
 				),
@@ -148,8 +150,10 @@ class Settings extends Abstract_Controller {
 					'permission_callback' => array( $this, 'update_item_permissions_check' ),
 					'args'                => array(
 						'complete' => array(
-							'required' => true,
-							'type'     => 'boolean',
+							'required'          => true,
+							'type'              => 'boolean',
+							'sanitize_callback' => array( $this, 'sanitize_boolean_param' ),
+							'validate_callback' => array( $this, 'validate_boolean_param' ),
 						),
 					),
 				),
@@ -167,8 +171,10 @@ class Settings extends Abstract_Controller {
 					'permission_callback' => array( $this, 'update_item_permissions_check' ),
 					'args'                => array(
 						'completed' => array(
-							'required' => true,
-							'type'     => 'boolean',
+							'required'          => true,
+							'type'              => 'boolean',
+							'sanitize_callback' => array( $this, 'sanitize_boolean_param' ),
+							'validate_callback' => array( $this, 'validate_boolean_param' ),
 						),
 					),
 				),
@@ -186,9 +192,11 @@ class Settings extends Abstract_Controller {
 					'permission_callback' => array( $this, 'update_item_permissions_check' ),
 					'args'                => array(
 						'plugin' => array(
-							'required' => true,
-							'type'     => 'string',
-							'enum'     => array( 'polylang', 'wpml' ),
+							'required'          => true,
+							'type'              => 'string',
+							'enum'              => array( 'polylang', 'wpml' ),
+							'sanitize_callback' => 'sanitize_key',
+							'validate_callback' => array( $this, 'validate_migration_plugin_param' ),
 						),
 					),
 				),
@@ -205,34 +213,116 @@ class Settings extends Abstract_Controller {
 					'permission_callback' => array( $this, 'update_item_permissions_check' ),
 					'args'                => array(
 						'plugin' => array(
-							'required' => true,
-							'type'     => 'string',
-							'enum'     => array( 'polylang', 'wpml' ),
+							'required'          => true,
+							'type'              => 'string',
+							'enum'              => array( 'polylang', 'wpml' ),
+							'sanitize_callback' => 'sanitize_key',
+							'validate_callback' => array( $this, 'validate_migration_plugin_param' ),
 						),
 						'migrate_languages'    => array(
-							'required' => false,
-							'type'     => 'boolean',
-							'default'  => true,
+							'required'          => false,
+							'type'              => 'boolean',
+							'default'           => true,
+							'sanitize_callback' => array( $this, 'sanitize_boolean_param' ),
+							'validate_callback' => array( $this, 'validate_boolean_param' ),
 						),
 						'migrate_translations' => array(
-							'required' => false,
-							'type'     => 'boolean',
-							'default'  => true,
+							'required'          => false,
+							'type'              => 'boolean',
+							'default'           => true,
+							'sanitize_callback' => array( $this, 'sanitize_boolean_param' ),
+							'validate_callback' => array( $this, 'validate_boolean_param' ),
 						),
 						'migrate_settings'     => array(
-							'required' => false,
-							'type'     => 'boolean',
-							'default'  => true,
+							'required'          => false,
+							'type'              => 'boolean',
+							'default'           => true,
+							'sanitize_callback' => array( $this, 'sanitize_boolean_param' ),
+							'validate_callback' => array( $this, 'validate_boolean_param' ),
 						),
 						'migrate_strings'     => array(
-							'required' => false,
-							'type'     => 'boolean',
-							'default'  => true,
+							'required'          => false,
+							'type'              => 'boolean',
+							'default'           => true,
+							'sanitize_callback' => array( $this, 'sanitize_boolean_param' ),
+							'validate_callback' => array( $this, 'validate_boolean_param' ),
 						),
 					),
 				),
 			)
 		);
+	}
+
+	/**
+	 * Sanitizes boolean-like request values.
+	 *
+	 * @param mixed $value Raw request value.
+	 * @return bool
+	 */
+	public function sanitize_boolean_param( $value ) {
+		if ( function_exists( 'rest_sanitize_boolean' ) ) {
+			return \rest_sanitize_boolean( $value );
+		}
+
+		// Fallback for WP installs that don't provide rest_sanitize_boolean().
+		if ( function_exists( 'wp_validate_boolean' ) ) {
+			// wp_validate_boolean() returns bool on valid values, null on invalid.
+			$validated = wp_validate_boolean( $value );
+			return null !== $validated ? (bool) $validated : false;
+		}
+
+		if ( is_bool( $value ) ) {
+			return $value;
+		}
+
+		if ( is_numeric( $value ) ) {
+			return (int) $value === 1;
+		}
+
+		if ( ! is_string( $value ) ) {
+			return false;
+		}
+
+		$v = strtolower( trim( $value ) );
+		return in_array( $v, array( '1', 'true', 'yes', 'on' ), true );
+	}
+
+	/**
+	 * Validates boolean-like request values.
+	 *
+	 * @param mixed $value Request value.
+	 * @return bool
+	 */
+	public function validate_boolean_param( $value ) {
+		if ( function_exists( 'wp_validate_boolean' ) ) {
+			return null !== wp_validate_boolean( $value );
+		}
+
+		if ( is_bool( $value ) ) {
+			return true;
+		}
+
+		if ( is_numeric( $value ) ) {
+			$n = (int) $value;
+			return (string) $n === (string) (int) $value && ( $n === 0 || $n === 1 );
+		}
+
+		if ( ! is_string( $value ) ) {
+			return false;
+		}
+
+		$v = strtolower( trim( $value ) );
+		return in_array( $v, array( '1', '0', 'true', 'false', 'yes', 'no', 'on', 'off' ), true );
+	}
+
+	/**
+	 * Validates migration plugin identifier.
+	 *
+	 * @param mixed $value Request value.
+	 * @return bool
+	 */
+	public function validate_migration_plugin_param( $value ) {
+		return in_array( sanitize_key( (string) $value ), array( 'polylang', 'wpml' ), true );
 	}
 
 	/**
@@ -252,12 +342,12 @@ class Settings extends Abstract_Controller {
 			return rest_ensure_response( array(
 				'success' => true,
 				'lmat_video_status' => $status,
-				'message' => 'Video status updated successfully'
+				'message' => esc_html__( 'Video status updated successfully', 'translate-words' )
 			) );
 		} else {
 			return new WP_Error(
 				'update_failed',
-				'Failed to update video status',
+				esc_html__( 'Failed to update video status', 'translate-words' ),
 				array( 'status' => 500 )
 			);
 		}
@@ -282,12 +372,12 @@ class Settings extends Abstract_Controller {
 			return rest_ensure_response( array(
 				'success' => true,
 				'lmat_setup_complete' => $complete,
-				'message' => 'Setup completion status updated successfully'
+				'message' => esc_html__( 'Setup completion status updated successfully', 'translate-words' )
 			) );
 		} else {
 			return new WP_Error(
 				'update_failed',
-				'Failed to update setup completion status',
+				esc_html__( 'Failed to update setup completion status', 'translate-words' ),
 				array( 'status' => 500 )
 			);
 		}
@@ -310,12 +400,12 @@ class Settings extends Abstract_Controller {
 			return rest_ensure_response( array(
 				'success' => true,
 				'lmat_migration_completed' => $completed,
-				'message' => 'Migration status updated successfully'
+				'message' => esc_html__( 'Migration status updated successfully', 'translate-words' )
 			) );
 		} else {
 			return new WP_Error(
 				'update_failed',
-				'Failed to update migration status',
+				esc_html__( 'Failed to update migration status', 'translate-words' ),
 				array( 'status' => 500 )
 			);
 		}
@@ -537,7 +627,7 @@ class Settings extends Abstract_Controller {
 		if ( empty( $domains ) || ! is_array( $domains ) ) {
 			$errors->add(
 				'missing_domains',
-				__( 'Domains are required when language is set from different domains.', 'linguator-multilingual-ai-translation' ),
+				__( 'Domains are required when language is set from different domains.', 'translate-words' ),
 				array( 'status' => 400 )
 			);
 			return $errors;
@@ -554,7 +644,7 @@ class Settings extends Abstract_Controller {
 				$errors->add(
 					'invalid_language',
 					// translators: %s is the language slug/code that was provided
-					sprintf( __( 'Invalid language code: %s', 'linguator-multilingual-ai-translation' ), $lang_slug ),
+					sprintf( __( 'Invalid language code: %s', 'translate-words' ), $lang_slug ),
 					array( 'status' => 400 )
 				);
 				continue;
@@ -565,7 +655,7 @@ class Settings extends Abstract_Controller {
 				$errors->add(
 					'empty_domain',
 					// translators: %s is the language slug/code that needs a domain URL
-					sprintf( __( 'Domain URL is required for language: %s', 'linguator-multilingual-ai-translation' ), $lang_slug ),
+					sprintf( __( 'Domain URL is required for language: %s', 'translate-words' ), $lang_slug ),
 					array( 'status' => 400 )
 				);
 				continue;
@@ -577,7 +667,7 @@ class Settings extends Abstract_Controller {
 				$errors->add(
 					'invalid_domain_format',
 					// translators: %1$s is the language slug/code, %2$s is the invalid domain URL provided
-					sprintf( __( 'Invalid domain URL format for language %1$s: %2$s', 'linguator-multilingual-ai-translation' ), $lang_slug, $domain_url ),
+					sprintf( __( 'Invalid domain URL format for language %1$s: %2$s', 'translate-words' ), $lang_slug, $domain_url ),
 					array( 'status' => 400 )
 				);
 				continue;
@@ -593,7 +683,7 @@ class Settings extends Abstract_Controller {
 				$errors->add(
 					'missing_language_domain',
 					// translators: %s is the language slug/code that is missing a domain URL
-					sprintf( __( 'Domain URL is required for language: %s', 'linguator-multilingual-ai-translation' ), $lang_slug ),
+					sprintf( __( 'Domain URL is required for language: %s', 'translate-words' ), $lang_slug ),
 					array( 'status' => 400 )
 				);
 			}
@@ -602,9 +692,14 @@ class Settings extends Abstract_Controller {
 		// Ping all URLs to make sure they are accessible - moved from Domains.php
 		$failed_urls = array();
 		foreach ( array_filter( $domains ) as $url ) {
-			$test_url = add_query_arg( 'deactivate-linguator', 1, $url );
-			// Don't redefine vip_safe_wp_remote_get() as it has not the same signature as wp_remote_get().
-			$response = function_exists( 'vip_safe_wp_remote_get' ) ? vip_safe_wp_remote_get( $test_url ) : wp_remote_get( $test_url );
+			$ping_token = wp_hash( 'lmat_domain_ping|' . gmdate( 'YmdH' ) );
+			$test_url   = add_query_arg(
+				array(
+					'lmat_ping_token' => $ping_token,
+				),
+				$url
+			);
+			$response = wp_remote_get( sanitize_url( $test_url ) );
 
 			if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
 				$failed_urls[] = $url;
@@ -615,10 +710,10 @@ class Settings extends Abstract_Controller {
 			// Blocking error - prevents save
 			if ( 1 === count( $failed_urls ) ) {
 				/* translators: %s is a URL. */
-				$message = __( 'Linguator was unable to access the %s URL. Please check that the URL is valid.', 'linguator-multilingual-ai-translation' );
+				$message = __( 'Linguator was unable to access the %s URL. Please check that the URL is valid.', 'translate-words' );
 			} else {
 				/* translators: %s is a list of URLs. */
-				$message = __( 'Linguator was unable to access the %s URLs. Please check that the URLs are valid.', 'linguator-multilingual-ai-translation' );
+				$message = __( 'Linguator was unable to access the %s URLs. Please check that the URLs are valid.', 'translate-words' );
 			}
 			$errors->add(
 				'lmat_invalid_domains',
@@ -646,7 +741,7 @@ class Settings extends Abstract_Controller {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return new WP_Error(
 				'rest_forbidden_context',
-				__( 'Sorry, you are not allowed to edit options.', 'linguator-multilingual-ai-translation' ),
+				__( 'Sorry, you are not allowed to edit options.', 'translate-words' ),
 				array( 'status' => rest_authorization_required_code() )
 			);
 		}
@@ -655,6 +750,24 @@ class Settings extends Abstract_Controller {
 		$nonce_check = $this->verify_nonce( $request );
 		if ( is_wp_error( $nonce_check ) ) {
 			return $nonce_check;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Checks if a given request has access to read the options.
+	 *
+	 * @param WP_REST_Request $request Full details about the request.
+	 * @return true|WP_Error True if the request has access to read options, WP_Error object otherwise.
+	 */
+	public function get_item_permissions_check( $request ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return new WP_Error(
+				'rest_forbidden_context',
+				__( 'Sorry, you are not allowed to view options.', 'translate-words' ),
+				array( 'status' => rest_authorization_required_code() )
+			);
 		}
 
 		return true;
@@ -799,7 +912,7 @@ class Settings extends Abstract_Controller {
 		} else {
 			return new WP_Error(
 				'invalid_plugin',
-				__( 'Invalid plugin specified.', 'linguator-multilingual-ai-translation' ),
+				__( 'Invalid plugin specified.', 'translate-words' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -809,7 +922,7 @@ class Settings extends Abstract_Controller {
 				$has_key => false,
 				'message' => sprintf(
 					/* translators: %s: Plugin name */
-					__( 'No %s data found.', 'linguator-multilingual-ai-translation' ),
+					__( 'No %s data found.', 'translate-words' ),
 					$plugin_name
 				),
 			) );
@@ -840,7 +953,7 @@ class Settings extends Abstract_Controller {
 		} else {
 			return new WP_Error(
 				'invalid_plugin',
-				__( 'Invalid plugin specified.', 'linguator-multilingual-ai-translation' ),
+				__( 'Invalid plugin specified.', 'translate-words' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -851,7 +964,7 @@ class Settings extends Abstract_Controller {
 			return new WP_Error(
 				'migration_failed',
 				/* translators: %s: Plugin name */
-				sprintf( __( 'Migration from %s completed with errors.', 'linguator-multilingual-ai-translation' ), $plugin_name ),
+				sprintf( __( 'Migration from %s completed with errors.', 'translate-words' ), $plugin_name ),
 				array(
 					'status' => 500,
 					'data'   => $results,
@@ -862,7 +975,7 @@ class Settings extends Abstract_Controller {
 		return rest_ensure_response( array(
 			'success' => true,
 			/* translators: %s: Plugin name */
-			'message' => sprintf( __( 'Migration from %s completed successfully.', 'linguator-multilingual-ai-translation' ), $plugin_name ),
+			'message' => sprintf( __( 'Migration from %s completed successfully.', 'translate-words' ), $plugin_name ),
 			'data'    => $results,
 		) );
 	}

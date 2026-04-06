@@ -9,31 +9,31 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 
 /**
- * Class LMAT_Admin_Site_Health to add debug info in WP Site Health.
+ * Class Linguator_Admin_Site_Health to add debug info in WP Site Health.
  *
  * @see https://make.wordpress.org/core/2019/04/25/site-health-check-in-5-2/ since WordPress 5.2
  *
  * @since 2.8
  */
-class LMAT_Admin_Site_Health {
+class Linguator_Admin_Site_Health {
 	/**
-	 * A reference to the LMAT_Model instance.
+	 * A reference to the Linguator_Model instance.
 	 *
 	 *
-	 * @var LMAT_Model
+	 * @var Linguator_Model
 	 */
 	protected $model;
 
 	/**
-	 * A reference to the LMAT_Admin_Static_Pages instance.
+	 * A reference to the Linguator_Admin_Static_Pages instance.
 	 *
 	 *
-	 * @var LMAT_Admin_Static_Pages|null
+	 * @var Linguator_Admin_Static_Pages|null
 	 */
 	protected $static_pages;
 
 	/**
-	 * LMAT_Admin_Site_Health constructor.
+	 * Linguator_Admin_Site_Health constructor.
 	 *
 	 *
 	 * @param object $linguator The Linguator object.
@@ -94,17 +94,19 @@ class LMAT_Admin_Site_Health {
 
 		// Get effective translated post types and taxonomies. The options doesn't show all translated ones.
 		if ( ! empty( $this->model->get_translated_post_types() ) ) {
-			$fields['cpt']['label'] = __( 'Post Types', 'linguator-multilingual-ai-translation' );
+			$fields['cpt']['label'] = __( 'Post Types', 'translate-words' );
 			$fields['cpt']['value'] = implode( ', ', $this->model->get_translated_post_types() );
 		}
 		if ( ! empty( $this->model->get_translated_taxonomies() ) ) {
-			$fields['taxonomies']['label'] = __( 'Custom Taxonomies', 'linguator-multilingual-ai-translation' );
+			$fields['taxonomies']['label'] = __( 'Custom Taxonomies', 'translate-words' );
 			$fields['taxonomies']['value'] = implode( ', ', $this->model->get_translated_taxonomies() );
 		}
 
+		$fields = $this->normalize_site_health_fields( $fields );
+
 		$debug_info['lmat_options'] = array(
 			/* translators: placeholder is the plugin name */
-			'label'  => sprintf( __( '%s options', 'linguator-multilingual-ai-translation' ), LINGUATOR ),
+			'label'  => sprintf( __( '%s options', 'translate-words' ), LINGUATOR ),
 			'fields' => $fields,
 		);
 
@@ -127,16 +129,12 @@ class LMAT_Admin_Site_Health {
 					continue;
 				}
 
-				if ( empty( $value ) ) {
-					$value = '0';
-				}
-
 				$fields[ $key ]['label'] = $key;
 
 				if ( 'term_props' === $key && is_array( $value ) ) {
 					$fields[ $key ]['value'] = $this->get_info_term_props( $value );
 				} else {
-					$fields[ $key ]['value'] = $value;
+					$fields[ $key ]['value'] = $this->normalize_site_health_value( $value );
 				}
 
 				if ( 'term_group' === $key ) {
@@ -144,16 +142,78 @@ class LMAT_Admin_Site_Health {
 				}
 			}
 
+			$fields = $this->normalize_site_health_fields( $fields );
+
 			$debug_info[ 'lmat_language_' . $language->slug ] = array(
 				/* translators: %1$s placeholder is the language name, %2$s is the language code */
-				'label'  => sprintf( __( 'Language: %1$s - %2$s', 'linguator-multilingual-ai-translation' ), $language->name, $language->slug ),
+				'label'  => sprintf( __( 'Language: %1$s - %2$s', 'translate-words' ), $language->name, $language->slug ),
 				/* translators: placeholder is the flag image */
-				'description' => sprintf( esc_html__( 'Flag used in the language switcher: %s', 'linguator-multilingual-ai-translation' ), $this->get_flag( $language ) ),
+				'description' => sprintf( esc_html__( 'Flag used in the language switcher: %s', 'translate-words' ), $this->get_flag( $language ) ),
 				'fields' => $fields,
 			);
 		}
 
 		return $debug_info;
+	}
+
+	/**
+	 * Ensures a Site Health "fields" array matches WP expected shape.
+	 *
+	 * Each field must be an array with at least 'label' and 'value' keys.
+	 * If a value isn't an array, it is converted into a field array.
+	 *
+	 * @param array $fields
+	 * @return array
+	 */
+	private function normalize_site_health_fields( array $fields ) {
+		foreach ( $fields as $key => $field ) {
+			if ( ! is_array( $field ) ) {
+				$fields[ $key ] = array(
+					'label' => (string) $key,
+					'value' => $this->normalize_site_health_value( $field ),
+				);
+				continue;
+			}
+
+			if ( ! array_key_exists( 'label', $field ) ) {
+				$fields[ $key ]['label'] = (string) $key;
+			}
+
+			if ( ! array_key_exists( 'value', $field ) ) {
+				$fields[ $key ]['value'] = '';
+			} else {
+				$fields[ $key ]['value'] = $this->normalize_site_health_value( $field['value'] );
+			}
+		}
+
+		return $fields;
+	}
+
+	/**
+	 * Normalizes a field value into a scalar/string for Site Health display.
+	 *
+	 * @param mixed $value
+	 * @return string
+	 */
+	private function normalize_site_health_value( $value ) {
+		if ( null === $value || false === $value || '' === $value ) {
+			return '0';
+		}
+
+		if ( true === $value ) {
+			return '1';
+		}
+
+		if ( is_scalar( $value ) ) {
+			return (string) $value;
+		}
+
+		if ( is_array( $value ) ) {
+			return $this->format_array_for_site_health_info( $value );
+		}
+
+		// Objects/resources: fall back to JSON-ish string for debug visibility.
+		return (string) wp_json_encode( $value );
 	}
 
 	/**
@@ -181,19 +241,64 @@ class LMAT_Admin_Site_Health {
 				$return_value = array_merge( $return_value, $value );
 			}
 		}
-		return $return_value;
+		return $this->format_array_for_site_health_info( $return_value );
+	}
+
+	/**
+	 * Formats an associative array for Site Health display.
+	 *
+	 * WordPress expects each field to be an array containing at least 'label' and 'value'.
+	 * When a field value itself is an array, it should be formatted as a string to avoid
+	 * WP interpreting it as nested fields.
+	 *
+	 * @param array $array
+	 * @return string
+	 */
+	private function format_array_for_site_health_info( array $array ) {
+		array_walk(
+			$array,
+			function ( &$value, $key ) {
+				if ( is_array( $value ) ) {
+					$ids   = implode( ' , ', $value );
+					$value = "$key: $ids";
+				} else {
+					$value = "$key: $value";
+				}
+			}
+		);
+
+		return implode( ' | ', $array );
 	}
 
 	/**
 	 * Returns the flag used in the language switcher.
 	 *
 	 *
-	 * @param LMAT_Language $language Language object.
+	 * @param Linguator_Language $language Language object.
 	 * @return string
 	 */
 	protected function get_flag( $language ) {
 		$flag = $language->get_display_flag();
-		return empty( $flag ) ? '<span>' . esc_html__( 'Undefined', 'linguator-multilingual-ai-translation' ) . '</span>' : $flag;
+		return empty( $flag )
+			? '<span>' . esc_html__( 'Undefined', 'translate-words' ) . '</span>'
+			: wp_kses(
+				(string) $flag,
+				array(
+					'img'  => array(
+						'src'      => true,
+						'alt'      => true,
+						'class'    => true,
+						'width'    => true,
+						'height'   => true,
+						'style'    => true,
+						'decoding' => true,
+						'loading'  => true,
+						'title'    => true,
+					),
+					'span' => array( 'class' => true, 'style' => true ),
+				),
+				array_merge( wp_allowed_protocols(), array( 'data' ) )
+			);
 	}
 
 	/**
@@ -207,7 +312,7 @@ class LMAT_Admin_Site_Health {
 		// Add the test only if the homepage displays static page.
 		if ( 'page' === get_option( 'show_on_front' ) && get_option( 'page_on_front' ) ) {
 			$tests['direct']['lmat_homepage'] = array(
-				'label' => esc_html__( 'Homepage translated', 'linguator-multilingual-ai-translation' ),
+				'label' => esc_html__( 'Homepage translated', 'translate-words' ),
 				'test'  => array( $this, 'homepage_test' ),
 			);
 		}
@@ -222,7 +327,7 @@ class LMAT_Admin_Site_Health {
 	 */
 	public function homepage_test() {
 		$result = array(
-			'label'       => __( 'All languages have a translated homepage', 'linguator-multilingual-ai-translation' ),
+			'label'       => __( 'All languages have a translated homepage', 'translate-words' ),
 			'status'      => 'good',
 			'badge'       => array(
 				'label' => LINGUATOR,
@@ -230,7 +335,7 @@ class LMAT_Admin_Site_Health {
 			),
 			'description' => sprintf(
 				'<p>%s</p>',
-				esc_html__( 'It is mandatory to translate the static front page in all languages.', 'linguator-multilingual-ai-translation' )
+				esc_html__( 'It is mandatory to translate the static front page in all languages.', 'translate-words' )
 			),
 			'actions'     => '',
 			'test'        => 'lmat_homepage',
@@ -240,8 +345,8 @@ class LMAT_Admin_Site_Health {
 
 		if ( ! empty( $message ) ) {
 			$result['status']      = 'critical';
-			$result['label']       = __( 'The homepage is not translated in all languages', 'linguator-multilingual-ai-translation' );
-			$result['description'] = sprintf( '<p>%s</p>', $message );
+			$result['label']       = __( 'The homepage is not translated in all languages', 'translate-words' );
+			$result['description'] = sprintf( '<p>%s</p>', wp_kses_post( $message ) );
 		}
 		return $result;
 	}
@@ -260,26 +365,26 @@ class LMAT_Admin_Site_Health {
 		$posts_no_lang = $this->get_post_ids_without_lang();
 
 		if ( ! empty( $posts_no_lang ) ) {
-			$fields['post-no-lang']['label'] = __( 'Posts without language', 'linguator-multilingual-ai-translation' );
-			$fields['post-no-lang']['value'] = $posts_no_lang;
+			$fields['post-no-lang']['label'] = __( 'Posts without language', 'translate-words' );
+			$fields['post-no-lang']['value'] = $this->format_array_for_site_health_info( $posts_no_lang );
 		}
 
 		$terms_no_lang = $this->get_term_ids_without_lang();
 
 		if ( ! empty( $terms_no_lang ) ) {
-			$fields['term-no-lang']['label'] = __( 'Terms without language', 'linguator-multilingual-ai-translation' );
-			$fields['term-no-lang']['value'] = $terms_no_lang;
+			$fields['term-no-lang']['label'] = __( 'Terms without language', 'translate-words' );
+			$fields['term-no-lang']['value'] = $this->format_array_for_site_health_info( $terms_no_lang );
 		}
 
 		// Multisite
 		if ( is_multisite() ) {
 			if ( is_plugin_active_for_network( LINGUATOR_BASENAME ) ) {
-				$network_activated = __( 'Yes', 'linguator-multilingual-ai-translation' );
+				$network_activated = __( 'Yes', 'translate-words' );
 			} else {
-				$network_activated = __( 'No', 'linguator-multilingual-ai-translation' );
+				$network_activated = __( 'No', 'translate-words' );
 			}
 			$fields['network_activated'] = array(
-				'label' => __( 'Network activated', 'linguator-multilingual-ai-translation' ),
+				'label' => __( 'Network activated', 'translate-words' ),
 				'value' => $network_activated,
 			);
 		}
@@ -288,7 +393,7 @@ class LMAT_Admin_Site_Health {
 		if ( ! empty( $fields ) ) {
 			$debug_info['lmat_warnings'] = array(
 				/* translators: placeholder is the plugin name */
-				'label'  => sprintf( __( '%s information', 'linguator-multilingual-ai-translation' ), LINGUATOR ),
+				'label'  => sprintf( __( '%s information', 'translate-words' ), LINGUATOR ),
 				'fields' => $fields,
 			);
 		}
@@ -342,3 +447,4 @@ class LMAT_Admin_Site_Health {
 		return $terms;
 	}
 }
+

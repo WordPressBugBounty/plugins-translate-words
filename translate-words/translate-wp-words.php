@@ -3,14 +3,27 @@
  * Plugin Name:       Linguator AI – Auto Translate & Create Multilingual Sites
  * Plugin URI:        https://linguator.com/
  * Description:       Create a multilingual WordPress website in minutes with Linguator AI – Auto Translate & Create Multilingual Sites.
- * Version:           2.0.6
- * Requires at least: 6.8
+ * Version:           2.1.4
  * Requires PHP:      7.2
  * Author:            Cool Plugins
  * Author URI:        https://coolplugins.net/?utm_source=twlmat_plugin&utm_medium=inside&utm_campaign=author_page&utm_content=plugins_list
- * Text Domain:       linguator-multilingual-ai-translation
- * License:           GPL2
- * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain:       translate-words
+ * License:           GPL v3 or later
+ * License URI:       https://www.gnu.org/licenses/gpl-3.0.txt
+ *
+ * --- CREDITS & COPYRIGHT NOTICE ---
+ * This plugin is a derivative work (fork) of the free version of Polylang, 
+ * originally developed by WP SYNTEX (https://wordpress.org/plugins/polylang).
+ * Original Copyright 2011-2019 Frédéric Demarle
+ * Original Copyright 2019-2026 WP SYNTEX
+ * it under the terms of the GNU General Public License as published by 
+ * the Free Software Foundation, either version 3 or later.
+ *  * * NOTE: While this is a fork of the free version, it incorporates the 
+ * 'Abstract_Screen' class structure originally from the 
+ * 'WP_Syntex\Polylang_Pro\Editors\Screens' namespace. This has been 
+ * refactored into the 'Linguator\Modules\Editors\Screens' namespace 
+ * to ensure a unique environment and prevent naming collisions.
+ * ----------------------------------
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -18,15 +31,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Linguator\Includes\Core\Linguator;
-use Linguator\Install\LMAT_Activate;
-use Linguator\Install\LMAT_Deactivate;
-use Linguator\Install\LMAT_Usable;
+use Linguator\Install\Linguator_Activate;
+use Linguator\Install\Linguator_Deactivate;
+use Linguator\Install\Linguator_Usable;
 
 
 
 // Linguator constants - wrapped in checks to prevent redeclaration
 if ( ! defined( 'LINGUATOR_VERSION' ) ) {
-	define( 'LINGUATOR_VERSION', '2.0.6' );
+	define( 'LINGUATOR_VERSION', '2.1.4' );
 }
 if ( ! defined( 'LMAT_MIN_WP_VERSION' ) ) {
 	define( 'LMAT_MIN_WP_VERSION', '6.8' );
@@ -59,12 +72,6 @@ if ( ! defined( 'LINGUATOR_BASENAME' ) ) {
 if ( ! defined( 'LINGUATOR' ) ) {
 	define( 'LINGUATOR', ucwords( str_replace( '-', ' ', dirname( LINGUATOR_BASENAME ) ) ) );
 }
-
-// Initialize the plugin
-if ( ! empty( $_GET['deactivate-linguator'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
-	return;
-}
-
 
 // Load legacy Translate Words functionality only for legacy users
 add_action( 'init', function() {
@@ -106,30 +113,6 @@ add_action( 'init', function() {
 	}
 }, 1 );
 
-
-
-// Display admin notice when linguator plugin is deactivated
-add_action('admin_notices', function() {
-    $linguator_plugin = 'linguator-multilingual-ai-translation/linguator-multilingual-ai-translation.php';
-        if ( is_plugin_active( $linguator_plugin ) ) {
-            deactivate_plugins( $linguator_plugin );
-            ?>
-            <div class="notice notice-info is-dismissible">
-                <p>
-                <?php
-                printf(
-                    /* translators: %1$s: link to Linguator plugin, %2$s: link to Translate Words plugin */
-                    wp_kses_post( __( 'The <a href="%1$s" target="_blank">Linguator – Multilingual AI Translation</a> plugin has been automatically deactivated because all its functionality is now available in <a href="%2$s" target="_blank">Linguator AI – Auto Translate & Create Multilingual Sites</a>.', 'linguator-multilingual-ai-translation' ) ),
-                    esc_url( 'https://wordpress.org/plugins/linguator-multilingual-ai-translation/' ),
-                    esc_url( 'https://wordpress.org/plugins/translate-words/' )
-                );
-                ?>
-                </p>
-            </div>
-            <?php
-        }
-});
-
 // Handle redirect after activation and language switcher visibility
 add_action('admin_init', function() {
 	// Don't redirect to wizard if Polylang is detected
@@ -137,25 +120,30 @@ add_action('admin_init', function() {
 		return;
 	}
 	
+	// Only run for users who can manage options
+	if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
 	// Only check setup flag on plugins page to avoid unnecessary database queries
 	$is_plugins_page = false;
-	if ( isset( $_SERVER['REQUEST_URI'] ) && strpos( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ), 'plugins.php' ) !== false ) {
-		$is_plugins_page = true;
-	}
+	if ( isset( $_SERVER['REQUEST_URI'] ) ) {
+        $request_uri = sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+        $is_plugins_page = strpos( $request_uri, 'plugins.php' ) !== false;
+    }
 	// Only run on plugins page
 	if ( $is_plugins_page ) {
-		// Only proceed if we need setup and are in admin
-		if (get_option('lmat_needs_setup') === 'yes' && is_admin()) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			if (!is_network_admin() && !isset($_GET['activate-multi'])) {
-				// Remove the setup flag
-				delete_option('lmat_needs_setup');
-				// Redirect to the setup wizard
-				wp_safe_redirect(admin_url('admin.php?page=lmat_wizard'));
-				exit;
-			}
-		}
-	}
+        if ( get_option( 'lmat_needs_setup' ) === 'yes' ) {
+
+            // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            if ( ! is_network_admin() && ! isset( $_GET['activate-multi'] ) ) {
+
+                delete_option( 'lmat_needs_setup' );
+
+                wp_safe_redirect( admin_url( 'admin.php?page=lmat_wizard' ) );
+                exit;
+            }
+        }
+    }
 	
 	// Ensure language switcher is visible on nav-menus page for new installations
 	$install_date = get_option('lmat_install_date');
@@ -195,22 +183,18 @@ add_action('admin_init', function() {
 if ( ! function_exists( 'lmat_has_constant' ) ) {
 	require __DIR__ . '/includes/helpers/constant-functions.php';
 }
-if ( ! LMAT_Usable::can_activate() ) {
+if ( ! Linguator_Usable::can_activate() ) {
 	// WP version or php version is too old.
 	return;
 }
 
-if ( ! defined( 'LMAT_ACTIVE' ) ) {
-	define( 'LMAT_ACTIVE', true );
-}
-
-if ( LMAT_Deactivate::is_deactivation() ) {
+if ( Linguator_Deactivate::is_deactivation() ) {
 	// Stopping here if we are going to deactivate the plugin (avoids breaking rewrite rules).
-	LMAT_Deactivate::add_hooks();
+	Linguator_Deactivate::add_hooks();
 	return;
 }
 
-LMAT_Activate::add_hooks();
+Linguator_Activate::add_hooks();
 
 new Linguator();
 

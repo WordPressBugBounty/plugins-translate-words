@@ -5,26 +5,26 @@
  * @package Linguator
  *
  * @var \Linguator\Settings\Header\Header $header An object representing the header.
- * @var LMAT_Table_String $string_table An object representing the translations list table.
+ * @var Linguator_Table_String $string_table An object representing the translations list table.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-use Linguator\Admin\Controllers\LMAT_Admin_Base;
+use Linguator\Admin\Controllers\Linguator_Admin_Base;
 ?>
 <div class="form-wrap">
 	<?php $header && $header instanceof \Linguator\Settings\Header\Header && $header->header(); ?>
 	<form id="string-translation" method="post" action="<?php echo esc_url( add_query_arg( 'noheader', 'true' ) ); ?>">
 		<input type="hidden" name="lmat_action" value="string-translation" />
 		<?php
-		$string_table->search_box( __( 'Search translations', 'linguator-multilingual-ai-translation' ), 'translations' );
+		$string_table->search_box( __( 'Search translations', 'translate-words' ), 'translations' );
 		wp_nonce_field( 'string-translation', '_wpnonce_string-translation' );
 		$string_table->display();
-		printf( '<br /><label><input name="clean" type="checkbox" value="1" /> %s</label>', esc_html__( 'Clean strings translation database', 'linguator-multilingual-ai-translation' ) );
+		printf( '<br /><label><input name="clean" type="checkbox" value="1" /> %s</label>', esc_html__( 'Clean strings translation database', 'translate-words' ) );
 		?>
-		<p><?php esc_html_e( 'Use this to remove unused strings from database, for example after a plugin has been uninstalled.', 'linguator-multilingual-ai-translation' ); ?></p>
+		<p><?php esc_html_e( 'Use this to remove unused strings from database, for example after a plugin has been uninstalled.', 'translate-words' ); ?></p>
 		<?php
 		submit_button(); // Since WP 3.1
 		?>
@@ -32,7 +32,7 @@ use Linguator\Admin\Controllers\LMAT_Admin_Base;
 	<div class="metabox-holder">
 		<?php
 		wp_nonce_field( 'closedpostboxes', 'closedpostboxesnonce', false );
-		do_meta_boxes( LMAT_Admin_Base::get_screen_id( 'strings' ), 'normal', array() );
+		do_meta_boxes( Linguator_Admin_Base::get_screen_id( 'strings' ), 'normal', array() );
 		?>
 	</div>
 

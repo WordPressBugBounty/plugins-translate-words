@@ -11,10 +11,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 
-use Linguator\Includes\Helpers\LMAT_Cache;
-use Linguator\Includes\Other\LMAT_Language;
-use Linguator\Includes\Other\LMAT_Language_Factory;
-use Linguator\Includes\Models\Translatable\LMAT_Translatable_Objects;
+use Linguator\Includes\Helpers\Linguator_Cache;
+use Linguator\Includes\Other\Linguator_Language;
+use Linguator\Includes\Other\Linguator_Language_Factory;
+use Linguator\Includes\Models\Translatable\Linguator_Translatable_Objects;
 use Linguator\Includes\Options\Options;
 use WP_Term;
 use WP_Error;
@@ -44,14 +44,14 @@ class Languages {
 	/**
 	 * Translatable objects registry.
 	 *
-	 * @var LMAT_Translatable_Objects
+	 * @var Linguator_Translatable_Objects
 	 */
 	private $translatable_objects;
 
 	/**
 	 * Internal non persistent cache object.
 	 *
-	 * @var LMAT_Cache<mixed>
+	 * @var Linguator_Cache<mixed>
 	 */
 	private $cache;
 
@@ -84,12 +84,12 @@ class Languages {
 	 *  	
 	 *
 	 * @param Options                  $options              Linguator's options.
-	 * @param LMAT_Translatable_Objects $translatable_objects Translatable objects registry.
-	 * @param LMAT_Cache                $cache                Internal non persistent cache object.
+	 * @param Linguator_Translatable_Objects $translatable_objects Translatable objects registry.
+	 * @param Linguator_Cache                $cache                Internal non persistent cache object.
 	 *
-	 * @phpstan-param LMAT_Cache<mixed> $cache
+	 * @phpstan-param Linguator_Cache<mixed> $cache
 	 */
-	public function __construct( Options $options, LMAT_Translatable_Objects $translatable_objects, LMAT_Cache $cache ) {
+	public function __construct( Options $options, Linguator_Translatable_Objects $translatable_objects, Linguator_Cache $cache ) {
 		$this->options              = $options;
 		$this->translatable_objects = $translatable_objects;
 		$this->cache                = $cache;
@@ -105,23 +105,23 @@ class Languages {
 	 *                     `term_id` and `term_taxonomy_id` can be fetched for any language taxonomy.
 	 *                     /!\ For the `term_taxonomy_id`, prefix the ID by `tt:` (ex: `"tt:{$tt_id}"`),
 	 *                     this is to prevent confusion between `term_id` and `term_taxonomy_id`.
-	 * @return LMAT_Language|false Language object, false if no language found.
+	 * @return Linguator_Language|false Language object, false if no language found.
 	 *
-	 * @phpstan-param LMAT_Language|WP_Term|int|string $value
+	 * @phpstan-param Linguator_Language|WP_Term|int|string $value
 	 */
 	public function get( $value ) {
-		if ( $value instanceof LMAT_Language ) {
+		if ( $value instanceof Linguator_Language ) {
 			return $value;
 		}
 
-		// Cast WP_Term to LMAT_Language.
+		// Cast WP_Term to Linguator_Language.
 		if ( $value instanceof WP_Term ) {
 			return $this->get( $value->term_id );
 		}
 
 		$return = $this->cache->get( 'language:' . $value );
 
-		if ( $return instanceof LMAT_Language ) {
+		if ( $return instanceof Linguator_Language ) {
 			return $return;
 		}
 
@@ -135,7 +135,7 @@ class Languages {
 			$this->cache->set( 'language:' . $lang->w3c, $lang );
 		}
 
-		/** @var LMAT_Language|false */
+		/** @var Linguator_Language|false */
 		return $this->cache->get( 'language:' . $value );
 	}
 
@@ -157,7 +157,7 @@ class Languages {
 	 *    @type string $flag_code      Optional. Country code, {@see settings/flags.php}. Will be converted to flag.
 	 *   @type bool   $no_default_cat Optional. If set, no default category will be created for this language. Default is false.
 	 * }
-	 * @return LMAT_Language|WP_Error The object language on success, a `WP_Error` otherwise.
+	 * @return Linguator_Language|WP_Error The object language on success, a `WP_Error` otherwise.
 	 *
 	 * @phpstan-param array{
 	 *     name?: string,
@@ -222,13 +222,13 @@ class Languages {
 		);
 
 		if ( is_wp_error( $r ) ) {
-			return new WP_Error( 'lmat_add_language', __( 'Impossible to add the language. Please check if the language code or locale is unique.', 'linguator-multilingual-ai-translation' ) );
+			return new WP_Error( 'lmat_add_language', __( 'Impossible to add the language. Please check if the language code or locale is unique.', 'translate-words' ) );
 		}
 
 		$id = (int) $r['term_id'];
 
 		if ( is_wp_error( $r ) ) {
-			return new WP_Error( 'lmat_add_language', __( 'Could not set the language order.', 'linguator-multilingual-ai-translation' ) );
+			return new WP_Error( 'lmat_add_language', __( 'Could not set the language order.', 'translate-words' ) );
 		}
 
 		// The other language taxonomies
@@ -243,7 +243,7 @@ class Languages {
 		$this->clean_cache();
 		$new_language = $this->get( $id );
 		if ( ! $new_language ) {
-			return new WP_Error( 'lmat_add_language', __( 'Could not add the language.', 'linguator-multilingual-ai-translation' ) );
+			return new WP_Error( 'lmat_add_language', __( 'Could not add the language.', 'translate-words' ) );
 		}
 
 		flush_rewrite_rules();
@@ -291,7 +291,7 @@ class Languages {
 		$lang = $this->get( $id );
 
 		if ( empty( $lang ) ) {
-			return new WP_Error( 'lmat_invalid_language_id', __( 'The language does not seem to exist.', 'linguator-multilingual-ai-translation' ) );
+			return new WP_Error( 'lmat_invalid_language_id', __( 'The language does not seem to exist.', 'translate-words' ) );
 		}
 
 		$args['locale']     = $args['locale'] ?? $lang->locale;
@@ -340,7 +340,7 @@ class Languages {
 		);
 
 		if ( is_wp_error( $r ) ) {
-			return new WP_Error( 'lmat_update_language', __( 'Could not update the language.', 'linguator-multilingual-ai-translation' ) );
+			return new WP_Error( 'lmat_update_language', __( 'Could not update the language.', 'translate-words' ) );
 		}
 
 		if ( $old_slug !== $slug ) {
@@ -408,7 +408,7 @@ class Languages {
 		$updated_language = $this->get( $id );
 
 		if ( ! $updated_language ) {
-			return new WP_Error( 'lmat_update_language', __( 'Could not update the language.', 'linguator-multilingual-ai-translation' ) );
+			return new WP_Error( 'lmat_update_language', __( 'Could not update the language.', 'translate-words' ) );
 		}
 
 		// Refresh rewrite rules.
@@ -431,7 +431,7 @@ class Languages {
 		 *   @type string $no_default_cat Optional, if set, no default category has been created for this language.
 		 *   @type string $flag           Optional, country code, @see flags.php.
 		 * }
-		 * @param LMAT_Language $lang Previous value of the language being edited.
+		 * @param Linguator_Language $lang Previous value of the language being edited.
 		 */
 		do_action( 'lmat_update_language', $args, $lang );
 
@@ -509,10 +509,10 @@ class Languages {
 		/*
 		 * Delete the language itself.
 		 *
-		 * Reverses the language taxonomies order is required to make sure 'lmat_language' is deleted in last.
+		 * Reverses the language taxonomies order is required to make sure 'linguator_language' is deleted in last.
 		 *
-		 * The initial order with the 'lmat_language' taxonomy at the beginning of 'LMAT_Language::term_props' property
-		 * is done by {@see LMAT_Model::filter_terms_orderby()}
+		 * The initial order with the 'linguator_language' taxonomy at the beginning of 'Linguator_Language::term_props' property
+		 * is done by {@see Linguator_Model::filter_terms_orderby()}
 		 */
 		foreach ( array_reverse( $lang->get_tax_props( 'term_id' ) ) as $taxonomy_name => $term_id ) {
 			wp_delete_term( $term_id, $taxonomy_name );
@@ -547,17 +547,17 @@ class Languages {
 
 	/**
 	 * Returns the list of available languages.
-	 * - Stores the list in a db transient (except flags), unless `LMAT_CACHE_LANGUAGES` is set to false.
-	 * - Caches the list (with flags) in a `LMAT_Cache` object.
+	 * - Stores the list in a db transient (except flags), unless `LINGUATOR_CACHE_LANGUAGES` is set to false.
+	 * - Caches the list (with flags) in a `Linguator_Cache` object.
 	 *
 	 *  
 	 *
 	 * @param array $args {
 	 *   @type bool   $hide_empty   Hides languages with no posts if set to `true` (defaults to `false`).
 	 *   @type bool   $hide_default Hides default language from the list (default to `false`).
-	 *   @type string $fields       Returns only that field if set; {@see LMAT_Language} for a list of fields.
+	 *   @type string $fields       Returns only that field if set; {@see Linguator_Language} for a list of fields.
 	 * }
-	 * @return array List of LMAT_Language objects or LMAT_Language object properties.
+	 * @return array List of Linguator_Language objects or Linguator_Language object properties.
 	 */
 	public function get_list( $args = array() ): array {
 
@@ -576,7 +576,7 @@ class Languages {
 
 			$this->is_creating_list = true;
 
-			if ( ! lmat_get_constant( 'LMAT_CACHE_LANGUAGES', true ) ) {
+			if ( ! linguator_get_constant( 'LINGUATOR_CACHE_LANGUAGES', true ) ) {
 				// Create the languages from taxonomies.
 				$languages = $this->get_from_taxonomies();
 			} else {
@@ -588,7 +588,7 @@ class Languages {
 				} else {
 					// Create the languages directly from arrays stored in the transient.
 					$languages = array_map(
-						array( new LMAT_Language_Factory( $this->options ), 'get' ),
+						array( new Linguator_Language_Factory( $this->options ), 'get' ),
 						$languages
 					);
 
@@ -650,7 +650,7 @@ class Languages {
 	 *
 	 *  
 	 *
-	 * @return LMAT_Language|false Default language object, `false` if no language found.
+	 * @return Linguator_Language|false Default language object, `false` if no language found.
 	 */
 	public function get_default() {
 		if ( empty( $this->options['default_lang'] ) ) {
@@ -774,11 +774,11 @@ class Languages {
 	 *
 	 * @since 0.0.8
 	 *
-	 * @param LMAT_Language[] $languages The list of language objects.
+	 * @param Linguator_Language[] $languages The list of language objects.
 	 * @param array          $args {
-	 *   @type string $fields Optional. Returns only that field if set; {@see LMAT_Language} for a list of fields.
+	 *   @type string $fields Optional. Returns only that field if set; {@see Linguator_Language} for a list of fields.
 	 * }
-	 * @return array List of `LMAT_Language` objects or `LMAT_Language` object properties.
+	 * @return array List of `Linguator_Language` objects or `Linguator_Language` object properties.
 	 */
 	public function maybe_convert_list( array $languages, array $args ): array {
 		if ( ! empty( $args['fields'] ) ) {
@@ -938,7 +938,7 @@ class Languages {
 	 *  
 	 *
 	 * @param array             $args Parameters of {@see Linguator\Includes\Models\Languages::add() or @see Linguator\Includes\Models\Languages::update()}.
-	 * @param LMAT_Language|null $lang Optional the language currently updated, the language is created if not set.
+	 * @param Linguator_Language|null $lang Optional the language currently updated, the language is created if not set.
 	 * @return WP_Error
 	 *
 	 * @phpstan-param array{
@@ -948,43 +948,43 @@ class Languages {
 	 *     flag?: string
 	 * } $args
 	 */
-	protected function validate_lang( $args, ?LMAT_Language $lang = null ): WP_Error {
+	protected function validate_lang( $args, ?Linguator_Language $lang = null ): WP_Error {
 		$errors = new WP_Error();
 
 		// Validate locale with the same pattern as WP 4.3. 
 		if ( empty( $args['locale'] ) || ! preg_match( '#' . self::LOCALE_PATTERN . '#', $args['locale'], $matches ) ) {
-			$errors->add( 'lmat_invalid_locale', __( 'Enter a valid WordPress locale', 'linguator-multilingual-ai-translation' ) );
+			$errors->add( 'lmat_invalid_locale', __( 'Enter a valid WordPress locale', 'translate-words' ) );
 		}
 
 		// Validate slug characters.
 		if ( empty( $args['slug'] ) || ! preg_match( '#' . self::SLUG_PATTERN . '#', $args['slug'] ) ) {
-			$errors->add( 'lmat_invalid_slug', __( 'The language code contains invalid characters', 'linguator-multilingual-ai-translation' ) );
+			$errors->add( 'lmat_invalid_slug', __( 'The language code contains invalid characters', 'translate-words' ) );
 		}
 
 		// Validate slug is unique.
 		foreach ( $this->get_list() as $language ) {
 			// Check if both slug and locale are the same (exact duplicate)
 			if ( ! empty( $args['slug'] ) && $language->slug === $args['slug'] && $language->locale === $args['locale'] && ( null === $lang || $lang->term_id !== $language->term_id ) ) {
-				$errors->add( 'lmat_non_unique_slug', __( 'This language with the same code and locale already exists', 'linguator-multilingual-ai-translation' ) );
+				$errors->add( 'lmat_non_unique_slug', __( 'This language with the same code and locale already exists', 'translate-words' ) );
 			}
 		}
 
 		// Validate name.
 		// No need to sanitize it as `wp_insert_term()` will do it for us.
 		if ( empty( $args['name'] ) ) {
-			$errors->add( 'lmat_invalid_name', __( 'The language must have a name', 'linguator-multilingual-ai-translation' ) );
+			$errors->add( 'lmat_invalid_name', __( 'The language must have a name', 'translate-words' ) );
 		}
 
 		// Validate flag.
 		if ( ! empty( $args['flag'] ) && ! is_readable( LINGUATOR_DIR . '/assets/flags/' . $args['flag'] . '.svg' ) ) {
-			$flag = LMAT_Language::get_flag_information( $args['flag'] );
+			$flag = Linguator_Language::get_flag_information( $args['flag'] );
 
 			if ( ! empty( $flag['url'] ) ) {
-				$response = function_exists( 'vip_safe_wp_remote_get' ) ? vip_safe_wp_remote_get( sanitize_url( $flag['url'] ) ) : wp_remote_get( sanitize_url( $flag['url'] ) );
+				$response = wp_remote_get( sanitize_url( $flag['url'] ) );
 			}
 
 			if ( empty( $response ) || is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
-				$errors->add( 'lmat_invalid_flag', __( 'The flag does not exist', 'linguator-multilingual-ai-translation' ) );
+				$errors->add( 'lmat_invalid_flag', __( 'The flag does not exist', 'translate-words' ) );
 			}
 		}
 
@@ -1072,7 +1072,7 @@ class Languages {
 			// Performance fix: Avoid wp_remove_object_terms() overhead when processing
 			// many terms across multiple languages.
 			// Support reference: https://wordpress.org/support/topic/fatal-error-while-attempting-to-delete-a-language/
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.NotPrepared
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
 			$wpdb->query(
 				$wpdb->prepare(
 					sprintf(
@@ -1083,9 +1083,10 @@ class Languages {
 					array_merge( $dr['id'], $dr['tt'] )
 				)
 			);
-
+			
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			if(is_wp_error($wpdb->query)){
-				$errors->add( 'lmat_delete_relationships', __( 'Could not delete the relationships.', 'linguator-multilingual-ai-translation' ) );
+				$errors->add( 'lmat_delete_relationships', __( 'Could not delete the relationships.', 'translate-words' ) );
 			}
 		}
 
@@ -1104,7 +1105,7 @@ class Languages {
 			// Performance fix: Avoid wp_delete_term() overhead when processing
 			// many terms across multiple languages.
 			// Support reference: https://wordpress.org/support/topic/fatal-error-while-attempting-to-delete-a-language/
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.NotPrepared
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
 			$wpdb->query(
 				$wpdb->prepare(
 					sprintf(
@@ -1115,15 +1116,16 @@ class Languages {
 				)
 			);
 
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			if(is_wp_error($wpdb->query)){
-				$errors->add( 'lmat_delete_terms', __( 'Could not delete the terms.', 'linguator-multilingual-ai-translation' ) );
+				$errors->add( 'lmat_delete_terms', __( 'Could not delete the terms.', 'translate-words' ) );
 			}
 
 			// @since 2.0.6
 			// Performance fix: Avoid wp_delete_term() overhead when processing
 			// many terms across multiple languages.
 			// Support reference: https://wordpress.org/support/topic/fatal-error-while-attempting-to-delete-a-language/
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.NotPrepared
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
 			$wpdb->query(
 				$wpdb->prepare(
 					sprintf(
@@ -1134,8 +1136,9 @@ class Languages {
 				)
 			);
 
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			if(is_wp_error($wpdb->query)){
-				$errors->add( 'lmat_delete_term_taxonomy', __( 'Could not delete the term taxonomy.', 'linguator-multilingual-ai-translation' ) );
+				$errors->add( 'lmat_delete_term_taxonomy', __( 'Could not delete the term taxonomy.', 'translate-words' ) );
 			}
 		}
 
@@ -1163,7 +1166,7 @@ class Languages {
 			// Performance fix: Avoid wp_update_term() overhead when processing
 			// many terms across multiple languages.
 			// Support reference: https://wordpress.org/support/topic/fatal-error-while-attempting-to-delete-a-language/
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.NotPrepared
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
 			$wpdb->query(
 				$wpdb->prepare(
 					sprintf(
@@ -1175,8 +1178,9 @@ class Languages {
 				)
 			);
 
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			if(is_wp_error($wpdb->query)){
-				$errors->add( 'lmat_update_term_taxonomy', __( 'Could not update the term taxonomy.', 'linguator-multilingual-ai-translation' ) );
+				$errors->add( 'lmat_update_term_taxonomy', __( 'Could not update the term taxonomy.', 'translate-words' ) );
 			}
 		}
 
@@ -1196,7 +1200,7 @@ class Languages {
 	 *
 	 * @param string            $slug       Language term slug (with or without the `lmat_` prefix).
 	 * @param string            $name       Language name (label).
-	 * @param LMAT_Language|null $language   Optional. A language object. Required to update the existing terms.
+	 * @param Linguator_Language|null $language   Optional. A language object. Required to update the existing terms.
 	 * @param string[]          $taxonomies Optional. List of language taxonomies to deal with. An empty value means
 	 *                                      all of them. Defaults to all taxonomies.
 	 * @return WP_Error
@@ -1205,7 +1209,7 @@ class Languages {
 	 * @phpstan-param non-empty-string $name
 	 * @phpstan-param array<non-empty-string> $taxonomies
 	 */
-	protected function update_secondary_language_terms( $slug, $name, ?LMAT_Language $language = null, array $taxonomies = array() ): WP_Error {
+	protected function update_secondary_language_terms( $slug, $name, ?Linguator_Language $language = null, array $taxonomies = array() ): WP_Error {
 		$slug = 0 === strpos( $slug, 'lmat_' ) ? $slug : "lmat_$slug";
 		$errors = new WP_Error();
 
@@ -1228,13 +1232,13 @@ class Languages {
 					$errors->add(
 						'lmat_add_secondary_language_terms',
 						/* translators: %s is a taxonomy name */
-						sprintf( __( 'Could not add secondary language term for taxonomy %s.', 'linguator-multilingual-ai-translation' ), $object->get_tax_language() )
+						sprintf( __( 'Could not add secondary language term for taxonomy %s.', 'translate-words' ), $object->get_tax_language() )
 					);
 				}
 				continue;
 			}
 
-			/** @var LMAT_Language $language */
+			/** @var Linguator_Language $language */
 			if ( "lmat_{$language->slug}" !== $slug || $language->name !== $name ) {
 				// Something has changed.
 				$r = wp_update_term( $term_id, $object->get_tax_language(), array( 'slug' => $slug, 'name' => $name ) );
@@ -1242,7 +1246,7 @@ class Languages {
 					$errors->add(
 						'lmat_update_secondary_language_terms',
 						/* translators: %s is a taxonomy name */
-						sprintf( __( 'Could not update secondary language term for taxonomy %s.', 'linguator-multilingual-ai-translation' ), $object->get_tax_language() )
+						sprintf( __( 'Could not update secondary language term for taxonomy %s.', 'translate-words' ), $object->get_tax_language() )
 					);
 				}
 			}
@@ -1253,13 +1257,13 @@ class Languages {
 
 	/**
 	 * Returns the list of available languages, based on the language taxonomy terms.
-	 * Stores the list in a db transient and in a `LMAT_Cache` object.
+	 * Stores the list in a db transient and in a `Linguator_Cache` object.
 	 *
 	 *  
 	 *
-	 * @return LMAT_Language[] An array of `LMAT_Language` objects, array keys are the type.
+	 * @return Linguator_Language[] An array of `Linguator_Language` objects, array keys are the type.
 	 *
-	 * @phpstan-return list<LMAT_Language>
+	 * @phpstan-return list<Linguator_Language>
 	 */
 	protected function get_from_taxonomies(): array {
 		$terms_by_slug = array();
@@ -1281,7 +1285,7 @@ class Languages {
 		 */
 		$languages = array_filter(
 			array_map(
-				array( new LMAT_Language_Factory( $this->options ), 'get_from_terms' ),
+				array( new Linguator_Language_Factory( $this->options ), 'get_from_terms' ),
 				array_values( $terms_by_slug )
 			)
 		);
@@ -1290,7 +1294,7 @@ class Languages {
 
 		if ( ! $this->are_ready() ) {
 			// Do not cache an incomplete list.
-			/** @var list<LMAT_Language> $languages */
+			/** @var list<Linguator_Language> $languages */
 			return $languages;
 		}
 
@@ -1306,7 +1310,7 @@ class Languages {
 
 		set_transient( self::TRANSIENT_NAME, $languages_data );
 
-		/** @var list<LMAT_Language> $languages */
+		/** @var list<Linguator_Language> $languages */
 		return $languages;
 	}
 

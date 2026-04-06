@@ -10,9 +10,9 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-use Linguator\Admin\Controllers\LMAT_Admin_Notices;
-use Linguator\Includes\Other\LMAT_Language;
-use Linguator\Admin\Controllers\LMAT_Admin_Model;
+use Linguator\Admin\Controllers\Linguator_Admin_Notices;
+use Linguator\Includes\Other\Linguator_Language;
+use Linguator\Admin\Controllers\Linguator_Admin_Model;
 use Linguator\Includes\Core\Linguator;
 use WP_Error;
 
@@ -25,12 +25,12 @@ use Linguator\Includes\Options\Options;
  *
  *  
  */
-class LMAT_Wizard
+class Linguator_Wizard
 {
 	/**
 	 * Reference to the model object
 	 *
-	 * @var LMAT_Admin_Model
+	 * @var Linguator_Admin_Model
 	 */
 	protected $model;
 
@@ -78,7 +78,7 @@ class LMAT_Wizard
 		add_action('admin_menu', array($this, 'add_admin_menu'));
 		
 		// Setup wizard page handling 
-		add_action('admin_init', array($this, 'setup_wizard_page'), 40);
+		add_action('admin_init', array($this, 'linguator_setup_wizard_page'), 40);
 
 		// Add Wizard submenu.
 		add_filter('lmat_settings_tabs', array($this, 'settings_tabs'), 10, 1);
@@ -96,8 +96,8 @@ class LMAT_Wizard
 	{
 		// Add the wizard page as a top-level admin menu item (hidden from menu)
 		add_menu_page(
-			esc_html__('Linguator Setup Wizard', 'linguator-multilingual-ai-translation'),
-			esc_html__('Linguator Setup', 'linguator-multilingual-ai-translation'),
+			esc_html__('Linguator Setup Wizard', 'translate-words'),
+			esc_html__('Linguator Setup', 'translate-words'),
 			'manage_options',
 			'lmat_wizard',
 			array($this, 'display_wizard_page'),
@@ -134,7 +134,7 @@ class LMAT_Wizard
 	 *
 	 * @return void
 	 */
-	public function redirect_to_wizard()
+	public function linguator_redirect_to_wizard()
 	{
 		// Only check for redirect transient on plugins page to avoid unnecessary database queries
 		global $pagenow;
@@ -144,7 +144,7 @@ class LMAT_Wizard
 		
 		if (get_transient('lmat_activation_redirect')) {
 			$do_redirect = true;
-			if ((isset($_GET['page']) && 'lmat_wizard' === sanitize_key($_GET['page'])) || isset($_GET['activate-multi'])) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			if ( ( isset( $_GET['page'] ) && 'lmat_wizard' === sanitize_key( wp_unslash( $_GET['page'] ) ) ) || isset( $_GET['activate-multi'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				delete_transient('lmat_activation_redirect');
 				$do_redirect = false;
 			}
@@ -179,7 +179,7 @@ class LMAT_Wizard
 	{
 		// Only show the wizard tab if setup is not complete
 		if (!get_option('lmat_setup_complete')) {
-			$tabs['wizard'] = esc_html__('Setup Guide', 'linguator-multilingual-ai-translation');
+			$tabs['wizard'] = esc_html__('Setup Guide', 'translate-words');
 		}
 		return $tabs;
 	}
@@ -189,7 +189,7 @@ class LMAT_Wizard
 	 *
 	 *  
 	 *
-	 * @param LMAT_Language[] $languages List of language objects.
+	 * @param Linguator_Language[] $languages List of language objects.
 	 * @return bool
 	 */
 	public function is_media_step_displayable($languages)
@@ -219,14 +219,14 @@ class LMAT_Wizard
 	 *
 	 * @return void
 	 */
-	public function setup_wizard_page()
+	public function linguator_setup_wizard_page()
 	{
 
 		if (!get_option('lmat_setup_complete')) {
-			LMAT_Admin_Notices::add_notice('wizard', $this->wizard_notice());
+			Linguator_Admin_Notices::add_notice('wizard', $this->wizard_notice());
 		}
 
-		$this->redirect_to_wizard();
+		$this->linguator_redirect_to_wizard();
 		if (! Linguator::is_wizard()) {
 			return;
 		}
@@ -285,19 +285,19 @@ class LMAT_Wizard
 	private function get_language_switcher_options() {
 		$language_switcher_options = array(
             array(
-                'label' => __( 'Classic (Menu, Widgets) Based', 'linguator-multilingual-ai-translation' ),
+                'label' => __( 'Classic (Menu, Widgets) Based', 'translate-words' ),
                 'value' => 'default',
 				'subheading' => 'Standard language switcher widget that can be added to widget areas and sidebars.'
             ),
             array(
-                'label' => __( 'Block Based', 'linguator-multilingual-ai-translation' ),
+                'label' => __( 'Block Based', 'translate-words' ),
                 'value' => 'block',
 				'subheading' => 'Gutenberg block widget for the block editor, compatible with modern WordPress themes.'
             )
         );
-        if(lmat_is_plugin_active('elementor/elementor.php')){
+        if(linguator_is_plugin_active('elementor/elementor.php')){
             $language_switcher_options[] = array(
-                'label' => __( 'Elementor Widget Based', 'linguator-multilingual-ai-translation' ),
+                'label' => __( 'Elementor Widget Based', 'translate-words' ),
                 'value' => 'elementor',
 				'subheading' => 'Specialized widget for Elementor page builder with enhanced styling and customization options.'
             );
@@ -316,7 +316,7 @@ class LMAT_Wizard
 	{
 		// Check permissions
 		if (! current_user_can('manage_options')) {
-			wp_die(esc_html__('Sorry, you are not allowed to manage options for this site.', 'linguator-multilingual-ai-translation'));
+			wp_die(esc_html__('Sorry, you are not allowed to manage options for this site.', 'translate-words'));
 		}
 
 		$steps          = $this->steps;
@@ -417,11 +417,11 @@ class LMAT_Wizard
 				'lmat_setup',
 				'lmat_setup',
 				array(
-					'dismiss_notice' => esc_html__('Dismiss this notice.', 'linguator-multilingual-ai-translation'),
+					'dismiss_notice' => esc_html__('Dismiss this notice.', 'translate-words'),
 					'api_url'        => rest_url('lmat/v1/'),
 					'nonce'          => wp_create_nonce('wp_rest'),
 					'languages'      => $this->model->get_languages_list(),
-					'all_languages'  => \Linguator\Settings\Controllers\LMAT_Settings::get_predefined_languages(),
+					'all_languages'  => \Linguator\Settings\Controllers\Linguator_Settings::get_predefined_languages(),
 					'media'          => $is_media_step_displayable,
 					'untranslated_contents' => $is_untranslated_contents_displayable,
 					'home_page' => $is_home_page_displayable,
@@ -460,16 +460,13 @@ class LMAT_Wizard
 	}
 
 	/**
-	 * Get the suffix to enqueue non minified files in a Debug context
+	 * Get the suffix used for built assets.
 	 *
-	 *  
-	 *
-	 * @return string Empty when SCRIPT_DEBUG equal to true
-	 *                otherwise .min
+	 * @return string Always '.min' (minified assets).
 	 */
 	public function get_suffix()
 	{
-		return defined('SCRIPT_DEBUG') && SCRIPT_DEBUG ? '' : '.min';
+		return '.min';
 	}
 
 	/**
@@ -503,18 +500,6 @@ class LMAT_Wizard
 		}
 	}
 
-
-
-
-
-
-
-
-
-
-
-
-
 	/**
 	 * Create home page translations for each language defined.
 	 *
@@ -541,8 +526,9 @@ class LMAT_Wizard
 				)
 			);
 			$translations[$language] = $id;
-			lmat_set_post_language($id, $language);
+			linguator_set_post_language($id, $language);
 		}
-		lmat_save_post_translations($translations);
+		linguator_save_post_translations($translations);
 	}
 }
+

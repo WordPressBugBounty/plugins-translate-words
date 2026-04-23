@@ -3,7 +3,7 @@
  * Plugin Name:       Linguator AI – Auto Translate & Create Multilingual Sites
  * Plugin URI:        https://linguator.com/
  * Description:       Create a multilingual WordPress website in minutes with Linguator AI – Auto Translate & Create Multilingual Sites.
- * Version:           2.1.4
+ * Version:           2.1.5
  * Requires PHP:      7.2
  * Author:            Cool Plugins
  * Author URI:        https://coolplugins.net/?utm_source=twlmat_plugin&utm_medium=inside&utm_campaign=author_page&utm_content=plugins_list
@@ -39,7 +39,7 @@ use Linguator\Install\Linguator_Usable;
 
 // Linguator constants - wrapped in checks to prevent redeclaration
 if ( ! defined( 'LINGUATOR_VERSION' ) ) {
-	define( 'LINGUATOR_VERSION', '2.1.4' );
+	define( 'LINGUATOR_VERSION', '2.1.5' );
 }
 if ( ! defined( 'LMAT_MIN_WP_VERSION' ) ) {
 	define( 'LMAT_MIN_WP_VERSION', '6.8' );
@@ -67,6 +67,39 @@ if ( ! defined( 'LINGUATOR_ROOT_FILE' ) ) {
 if ( ! defined( 'LINGUATOR_BASENAME' ) ) {
 	define( 'LINGUATOR_BASENAME', plugin_basename( __FILE__ ) ); // Plugin name as known by WP.
 	require __DIR__ . '/vendor/autoload.php';
+}
+
+if(function_exists('wp_ai_client_prompt') && class_exists('WordPress\AiClient\AiClient')){
+	require_once __DIR__ . '/includes/ai-providers/vendor/autoload.php';
+
+	// Register bundled AI providers (when installed as composer packages they don't auto-register).
+	add_action(
+		'init',
+		static function () {
+			if ( ! class_exists( '\WordPress\AiClient\AiClient' ) ) {
+				return;
+			}
+
+			$registry = \WordPress\AiClient\AiClient::defaultRegistry();
+			if ( ! $registry || ! method_exists( $registry, 'registerProvider' ) || ! method_exists( $registry, 'hasProvider' ) ) {
+				return;
+			}
+
+			$providers = array(
+				'google' => '\WordPress\GoogleAiProvider\Provider\GoogleProvider',
+			);
+
+			foreach ( $providers as $provider_id => $provider_class ) {
+				if ( $registry->hasProvider( $provider_id ) ) {
+					continue;
+				}
+				if ( class_exists( $provider_class ) ) {
+					$registry->registerProvider( $provider_class );
+				}
+			}
+		},
+		9
+	);
 }
 
 if ( ! defined( 'LINGUATOR' ) ) {

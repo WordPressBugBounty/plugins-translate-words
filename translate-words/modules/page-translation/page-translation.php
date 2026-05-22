@@ -425,7 +425,7 @@ class Linguator_Page_Translation {
 
 		if ( function_exists( 'linguator_is_wp_ai_client_exist' ) && linguator_is_wp_ai_client_exist() ) {
 			foreach ( $api_keys_status as $key => $status ) {
-				$api_key = get_option( 'connectors_ai_' . $key . '_key', '' );
+				$api_key = get_option( 'connectors_ai_google_api_key', '' );
 				if ( ! empty( $api_key ) ) {
 					$api_keys_status[ $key ] = true;
 				}
@@ -500,6 +500,8 @@ class Linguator_Page_Translation {
 				'slug_translation_option'  => $slug_translation_option,
 				'rest_nonce'               => wp_create_nonce( 'wp_rest' ),
 				'ai_batch_translate_url'   => get_rest_url( null, 'lmat/v1/page-translate/ai-translate-batch' ),
+				'AIRequestMaxTokens'       => (int) get_option( 'lmat_ai_request_token_per_request', 500 ),
+				'AIRequestBatchSize'       => (int) get_option( 'lmat_ai_request_batch_size', 5 ),
 			),
 			$extra_data
 		);
